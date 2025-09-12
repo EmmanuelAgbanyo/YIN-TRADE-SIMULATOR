@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { GoogleGenAI, Chat } from '@google/genai';
-import type { Message, Stock, Portfolio } from '../types.js';
+import type { Message, Stock, Portfolio } from '../types.ts';
 
 // Initialize the Gemini AI model once
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
