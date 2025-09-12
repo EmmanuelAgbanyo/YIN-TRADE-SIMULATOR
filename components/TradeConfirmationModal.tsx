@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { TradeOrder, Stock } from '../types';
-import { OrderType } from '../types';
-import Button from './ui/Button';
+import type { TradeOrder, Stock } from '../types.js';
+import { OrderType } from '../types.js';
+import Button from './ui/Button.js';
 
 interface TradeConfirmationModalProps {
   isOpen: boolean;

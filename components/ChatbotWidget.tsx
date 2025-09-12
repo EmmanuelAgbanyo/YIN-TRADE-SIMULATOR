@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Stock, Portfolio } from '../types';
-import { useChatbot } from '../hooks/useChatbot';
+import type { Stock, Portfolio } from '../types.js';
+import { useChatbot } from '../hooks/useChatbot.js';
 
 // Icons
 const ChatBubbleOvalLeftEllipsisIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (

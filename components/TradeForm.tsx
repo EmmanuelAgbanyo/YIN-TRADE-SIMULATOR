@@ -1,8 +1,9 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Stock, Portfolio, TradeOrder, MarketStatus } from '../types.ts';
-import { TradeType, OrderType } from '../types.ts';
-import Button from './ui/Button.tsx';
+import type { Stock, Portfolio, TradeOrder, MarketStatus } from '../types.js';
+import { TradeType, OrderType } from '../types.js';
+import Button from './ui/Button.js';
 
 interface TradeFormProps {
   stocks: Stock[];

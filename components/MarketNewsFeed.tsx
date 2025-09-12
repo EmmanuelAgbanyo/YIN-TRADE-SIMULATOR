@@ -1,9 +1,10 @@
 
 
+
 import React from 'react';
-import type { NewsHeadline } from '../types.ts';
-import Card from './ui/Card.tsx';
-import Button from './ui/Button.tsx';
+import type { NewsHeadline } from '../types.js';
+import Card from './ui/Card.js';
+import Button from './ui/Button.js';
 
 interface MarketNewsFeedProps {
   news: NewsHeadline[];

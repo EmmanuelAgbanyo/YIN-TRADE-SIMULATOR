@@ -1,7 +1,8 @@
 
+
 import React from 'react';
-import type { Module } from './types';
-import LessonContent from './components/LessonContent';
+import type { Module } from './types.js';
+import LessonContent from './components/LessonContent.js';
 
 export const ACADEMY_MODULES: Module[] = [
   {

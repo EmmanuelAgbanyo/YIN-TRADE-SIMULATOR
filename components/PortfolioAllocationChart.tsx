@@ -1,8 +1,9 @@
 
+
 import React from 'react';
-import type { Holding, Stock } from '../types.ts';
-import Card from './ui/Card.tsx';
-import EmptyState from './ui/EmptyState.tsx';
+import type { Holding, Stock } from '../types.js';
+import Card from './ui/Card.js';
+import EmptyState from './ui/EmptyState.js';
 
 interface PortfolioAllocationChartProps {
   holdings: { [symbol:string]: Holding };

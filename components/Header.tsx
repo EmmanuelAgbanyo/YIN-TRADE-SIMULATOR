@@ -1,7 +1,8 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
-import ThemeSwitcher from './ui/ThemeSwitcher.tsx';
-import type { MarketSentiment, UserProfile, Team, MarketStatus } from '../types.ts';
+import ThemeSwitcher from './ui/ThemeSwitcher.js';
+import type { MarketSentiment, UserProfile, Team, MarketStatus } from '../types.js';
 
 interface HeaderProps {
     theme: string;

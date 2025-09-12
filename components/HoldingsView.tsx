@@ -1,10 +1,11 @@
 
+
 import React from 'react';
-import type { Holding, Stock, OHLC } from '../types.ts';
-import { TradeType } from '../types.ts';
-import Button from './ui/Button.tsx';
-import Card from './ui/Card.tsx';
-import EmptyState from './ui/EmptyState.tsx';
+import type { Holding, Stock, OHLC } from '../types.js';
+import { TradeType } from '../types.js';
+import Button from './ui/Button.js';
+import Card from './ui/Card.js';
+import EmptyState from './ui/EmptyState.js';
 
 const BriefcaseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>

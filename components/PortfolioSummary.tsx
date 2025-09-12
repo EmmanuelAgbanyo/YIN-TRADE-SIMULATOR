@@ -1,7 +1,8 @@
 
+
 import React from 'react';
-import Card from './ui/Card.tsx';
-import type { UnsettledCashItem } from '../types.ts';
+import Card from './ui/Card.js';
+import type { UnsettledCashItem } from '../types.js';
 
 interface PortfolioSummaryProps {
   cash: number;
