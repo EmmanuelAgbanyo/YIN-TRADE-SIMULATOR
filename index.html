@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <script>
+      // Polyfill `process` for browser environment.
+      // In a no-build-step setup, Node.js-style environment variables like `process.env`
+      // are not available by default. This script prevents a `ReferenceError` when the
+      // application code tries to access `process.env.API_KEY`. The actual API key is
+      // expected to be injected into this object by the deployment environment
+      // (e.g., via Netlify's "Script injection" feature).
+      if (typeof window.process === 'undefined') {
+        window.process = { env: {} };
+      }
+    </script>
+    <script>
       // Hide the specific Babel warning in this no-build-step environment.
       // This is a pragmatic solution to keep the console clean for this simulator
       // where a build step is intentionally avoided. The warning is expected behavior.
