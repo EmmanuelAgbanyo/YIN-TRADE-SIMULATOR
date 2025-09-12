@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import Button from './ui/Button';
+import Button from './ui/Button.tsx';
 
 interface SetPasswordModalProps {
   isOpen: boolean;
@@ -28,8 +29,8 @@ const SetPasswordModal: React.FC<SetPasswordModalProps> = ({ isOpen, onClose, on
         return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+        setError("Passwords do not match.");
+        return;
     }
     setError(null);
     onSetPassword(password);
@@ -52,7 +53,7 @@ const SetPasswordModal: React.FC<SetPasswordModalProps> = ({ isOpen, onClose, on
                 <ShieldCheckIcon className="w-8 h-8 text-success" />
             </div>
             <h2 className="text-2xl font-bold text-text-strong">Secure Your Profile</h2>
-            <p className="text-base-content/80">Add a password to protect your trading activity.</p>
+            <p className="text-base-content/80">Add a password to protect your account.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -64,6 +65,7 @@ const SetPasswordModal: React.FC<SetPasswordModalProps> = ({ isOpen, onClose, on
                 onChange={(e) => { setPassword(e.target.value); setError(null); }}
                 placeholder="New Password (min. 6 characters)"
                 className="input input-bordered w-full bg-base-100 border-base-300"
+                autoFocus
                 />
             </div>
             <div>
@@ -73,14 +75,14 @@ const SetPasswordModal: React.FC<SetPasswordModalProps> = ({ isOpen, onClose, on
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
-                placeholder="Confirm Password"
+                placeholder="Confirm New Password"
                 className="input input-bordered w-full bg-base-100 border-base-300"
                 />
             </div>
           {error && <p className="text-sm text-error text-center !mt-2">{error}</p>}
           <div className="flex space-x-3 !mt-6">
             <Button type="button" variant="ghost" className="w-full" onClick={onClose}>Cancel</Button>
-            <Button type="submit" variant="success" className="w-full" disabled={!password || !confirmPassword}>
+            <Button type="submit" variant="primary" className="w-full" disabled={!password || !confirmPassword}>
               Set Password
             </Button>
           </div>

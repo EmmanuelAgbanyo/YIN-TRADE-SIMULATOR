@@ -1,6 +1,7 @@
+
 import React, { useMemo } from 'react';
-import type { Stock } from '../types';
-import Card from './ui/Card';
+import type { Stock } from '../types.ts';
+import Card from './ui/Card.tsx';
 
 interface MarketMoversProps {
   stocks: Stock[];

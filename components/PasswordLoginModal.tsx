@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import Button from './ui/Button';
-import type { UserProfile } from '../types';
+import Button from './ui/Button.tsx';
+import type { UserProfile } from '../types.ts';
 
 interface PasswordLoginModalProps {
   isOpen: boolean;

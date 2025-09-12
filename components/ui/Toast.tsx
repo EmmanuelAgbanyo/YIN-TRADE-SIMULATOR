@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import type { ToastMessage } from '../../types';
+import type { ToastMessage } from '../../types.ts';
 
 interface ToastProps {
   message: ToastMessage;

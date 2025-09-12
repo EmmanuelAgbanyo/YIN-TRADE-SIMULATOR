@@ -2,6 +2,18 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Hide the specific Babel warning in this no-build-step environment.
+      // This is a pragmatic solution to keep the console clean for this simulator
+      // where a build step is intentionally avoided. The warning is expected behavior.
+      const originalWarn = console.warn;
+      console.warn = (...args) => {
+        if (typeof args[0] === 'string' && args[0].includes('in-browser Babel transformer')) {
+          return;
+        }
+        originalWarn.apply(console, args);
+      };
+    </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>YIN Trade Simulator</title>

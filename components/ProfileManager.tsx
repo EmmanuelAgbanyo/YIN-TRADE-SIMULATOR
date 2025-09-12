@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
-import type { UserProfile, Team, TeamInvite } from '../types';
-import Button from './ui/Button';
-import ThemeSwitcher from './ui/ThemeSwitcher';
-import PasswordLoginModal from './PasswordLoginModal';
+import type { UserProfile, Team, TeamInvite } from '../types.ts';
+import Button from './ui/Button.tsx';
+import ThemeSwitcher from './ui/ThemeSwitcher.tsx';
+import PasswordLoginModal from './PasswordLoginModal.tsx';
 
 // A simple simulation of password hashing for this browser-only environment.
 // In a real application, NEVER do this. Use a library like bcrypt on a server.

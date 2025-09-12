@@ -1,18 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import MarketView from './components/MarketView';
-import { useStockMarket } from './hooks/useStockMarket';
-import Toast from './components/ui/Toast';
-import OnboardingModal from './components/OnboardingModal';
-import GuideModal from './components/GuideModal';
-import StockTicker from './components/StockTicker';
-import type { UserProfile, ToastMessage, Team, TeamInvite } from './types';
-import ProfileManager from './components/ProfileManager';
-import SetPasswordModal from './components/SetPasswordModal';
-import CreateTeamModal from './components/CreateTeamModal';
-import Footer from './components/Footer';
-import SplashScreen from './components/SplashScreen';
-import ChatbotWidget from './components/ChatbotWidget';
+import Header from './components/Header.tsx';
+import MarketView from './components/MarketView.tsx';
+import { useStockMarket } from './hooks/useStockMarket.ts';
+import Toast from './components/ui/Toast.tsx';
+import OnboardingModal from './components/OnboardingModal.tsx';
+import GuideModal from './components/GuideModal.tsx';
+import StockTicker from './components/StockTicker.tsx';
+import type { UserProfile, ToastMessage, Team, TeamInvite } from './types.ts';
+import ProfileManager from './components/ProfileManager.tsx';
+import SetPasswordModal from './components/SetPasswordModal.tsx';
+import CreateTeamModal from './components/CreateTeamModal.tsx';
+import Footer from './components/Footer.tsx';
+import SplashScreen from './components/SplashScreen.tsx';
+import ChatbotWidget from './components/ChatbotWidget.tsx';
 
 // A simple simulation of password hashing for this browser-only environment.
 const hashPassword = (password: string): string => btoa(password);

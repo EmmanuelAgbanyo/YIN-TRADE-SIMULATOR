@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import Button from './ui/Button';
+import Button from './ui/Button.tsx';
 
 interface OnboardingModalProps {
   isVisible: boolean;

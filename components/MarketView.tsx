@@ -1,21 +1,22 @@
+
 import React, { useState, useMemo } from 'react';
-import type { Stock, Portfolio, OrderHistoryItem, TradeOrder, NewsHeadline, ActiveOrder, UserProfile, ToastMessage, MarketEvent, MarketStatus } from '../types';
-import { TradeType } from '../types';
-import PortfolioSummary from './PortfolioSummary';
-import HoldingsView from './HoldingsView';
-import TradeForm from './TradeForm';
-import HistoryView from './HistoryView';
-import OrdersView from './OrdersView';
-import MarketMovers from './MarketMovers';
-import MarketNewsFeed from './MarketNewsFeed';
-import StockChartView from './StockChartView';
-import { useAIAnalyst } from '../hooks/useAIAnalyst';
-import PortfolioAllocationChart from './PortfolioAllocationChart';
-import AdminView from './AdminView';
-import TeamView from './TeamView';
-import AcademyView from './AcademyView';
-import MarketEventDisplay from './MarketEventDisplay';
-import TradeConfirmationModal from './TradeConfirmationModal';
+import type { Stock, Portfolio, OrderHistoryItem, TradeOrder, NewsHeadline, ActiveOrder, UserProfile, ToastMessage, MarketEvent, MarketStatus } from '../types.ts';
+import { TradeType } from '../types.ts';
+import PortfolioSummary from './PortfolioSummary.tsx';
+import HoldingsView from './HoldingsView.tsx';
+import TradeForm from './TradeForm.tsx';
+import HistoryView from './HistoryView.tsx';
+import OrdersView from './OrdersView.tsx';
+import MarketMovers from './MarketMovers.tsx';
+import MarketNewsFeed from './MarketNewsFeed.tsx';
+import StockChartView from './StockChartView.tsx';
+import { useAIAnalyst } from '../hooks/useAIAnalyst.ts';
+import PortfolioAllocationChart from './PortfolioAllocationChart.tsx';
+import AdminView from './AdminView.tsx';
+import TeamView from './TeamView.tsx';
+import AcademyView from './AcademyView.tsx';
+import MarketEventDisplay from './MarketEventDisplay.tsx';
+import TradeConfirmationModal from './TradeConfirmationModal.tsx';
 
 interface MarketViewProps {
   stocks: Stock[];

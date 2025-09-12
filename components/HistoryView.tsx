@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
-import type { OrderHistoryItem } from '../types';
-import { TradeType, OrderStatus } from '../types';
-import EmptyState from './ui/EmptyState';
-import Card from './ui/Card';
-import Button from './ui/Button';
+import type { OrderHistoryItem } from '../types.ts';
+import { TradeType, OrderStatus } from '../types.ts';
+import EmptyState from './ui/EmptyState.tsx';
+import Card from './ui/Card.tsx';
+import Button from './ui/Button.tsx';
 
 interface HistoryViewProps {
   history: OrderHistoryItem[];

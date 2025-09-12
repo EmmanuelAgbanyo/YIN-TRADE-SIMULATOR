@@ -1,18 +1,19 @@
+
 // FIX: Imported 'useCallback' from React.
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { UserProfile, ProfileState, Stock, Team, AdminSettings, ToastMessage, MarketEvent, Module } from '../types';
-import Card from './ui/Card';
+import type { UserProfile, ProfileState, Stock, Team, AdminSettings, ToastMessage, MarketEvent, Module } from '../types.ts';
+import Card from './ui/Card.tsx';
 import { 
     DEFAULT_STARTING_CAPITAL, DEFAULT_ANNUAL_DRIFT, DEFAULT_ANNUAL_VOLATILITY, 
     DEFAULT_EVENT_CHANCE_PER_TICK, DEFAULT_MARKET_DURATION_MINUTES,
     DEFAULT_CIRCUIT_BREAKER_ENABLED, DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
     DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS, DEFAULT_SIMULATION_SPEED,
     DEFAULT_INTEREST_RATE, DEFAULT_COMMISSION_FEE
-} from '../constants';
-import { MARKET_EVENTS_TEMPLATES } from '../hooks/useStockMarket';
-import { ACADEMY_MODULES } from '../academy-content';
-import Button from './ui/Button';
-import ConfirmationModal from './ConfirmationModal';
+} from '../constants.ts';
+import { MARKET_EVENTS_TEMPLATES } from '../hooks/useStockMarket.ts';
+import { ACADEMY_MODULES } from '../academy-content.ts';
+import Button from './ui/Button.tsx';
+import ConfirmationModal from './ConfirmationModal.tsx';
 
 interface AdminViewProps {
     stocks: Stock[];

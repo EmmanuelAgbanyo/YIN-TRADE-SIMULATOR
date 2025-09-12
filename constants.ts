@@ -1,4 +1,5 @@
-import type { Stock, OHLC } from './types';
+
+import type { Stock, OHLC } from './types.ts';
 
 export const DEFAULT_STARTING_CAPITAL = 100000;
 export const MARKET_OPEN_DELAY_MS = 5000;

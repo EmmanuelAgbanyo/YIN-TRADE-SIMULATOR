@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import type { Stock, Message } from '../types';
-import Button from './ui/Button';
+import type { Stock, Message } from '../types.ts';
+import Button from './ui/Button.tsx';
 
 interface AnalystSession {
     messages: Message[];

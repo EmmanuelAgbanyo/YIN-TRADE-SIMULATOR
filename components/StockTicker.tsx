@@ -1,5 +1,6 @@
+
 import React from 'react';
-import type { Stock } from '../types';
+import type { Stock } from '../types.ts';
 
 interface StockTickerProps {
   stocks: Stock[];
