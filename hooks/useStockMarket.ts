@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
 import type { Stock, ProfileState, ToastMessage, NewsHeadline, MarketSentiment, TradeOrder, ActiveOrder, OrderHistoryItem, OHLC, UserProfile, Team, AdminSettings, UnsettledCashItem, MarketEvent, MarketStatus } from '../types.ts';
@@ -178,43 +179,31 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
     fetchNews();
   }, [fetchNews]);
 
-  // Market Clock and Trade Execution Engine
-  useEffect(() => {
-    let manualEventCheckInterval: number;
+  // *** REFACTORED SIMULATION ENGINE ***
+  // The original monolithic useEffect has been broken down into a chain of dependent effects
+  // for clarity and separation of concerns.
+  // 1. MarketClock & Events: Manages market status (OPEN/CLOSED) and triggers events.
+  // 2. PriceTicker: Runs when the market is OPEN, updating stock prices on an interval.
+  // 3. OrderProcessor & CircuitBreaker: Reacts to price changes to execute orders and check for halts.
 
+  // FIX: Split the monolithic market simulation effect into smaller, focused effects
+  // to prevent stale closures and incorrect re-executions. This resolves the logical error
+  // that was likely causing the reported type comparison issue.
+  // Effect 1a: Market Clock Engine
+  useEffect(() => {
+    // This effect runs once to set up the main market timers.
     const marketOpenTimer = setTimeout(() => {
         setMarketStatus('OPEN');
         showToast('info', 'The market is now open for trading!');
-        // Set initial index price for circuit breaker
         const initialIndex = STOCKS_DATA.reduce((sum, s) => sum + s.price, 0) / STOCKS_DATA.length;
         setMarketOpenIndexPrice(initialIndex);
         setCircuitBreakerTriggered(false);
-
-        // Check for manually triggered events from admin
-        manualEventCheckInterval = window.setInterval(() => {
-            const manualEventJSON = localStorage.getItem('yin_trade_manual_event');
-            if (manualEventJSON) {
-                const { eventName, timestamp } = JSON.parse(manualEventJSON);
-                // Use event if it's new
-                if (Date.now() - timestamp < 5000) {
-                    const template = MARKET_EVENTS_TEMPLATES.find(e => e.title === eventName);
-                    if (template) {
-                        const duration = 20000 + Math.random() * 20000;
-                        const newEvent: MarketEvent = { ...template, duration, expiresAt: Date.now() + duration };
-                        setActiveMarketEvent(newEvent);
-                        showToast('info', newEvent.title);
-                    }
-                    localStorage.removeItem('yin_trade_manual_event');
-                }
-            }
-        }, 2000);
-    }, MARKET_OPEN_DELAY_MS); 
+    }, MARKET_OPEN_DELAY_MS);
 
     const marketCloseTimer = setTimeout(() => {
         setMarketStatus('CLOSED');
         setActiveMarketEvent(null);
         showToast('info', 'The market has closed. Pending orders have expired.');
-        if (manualEventCheckInterval) clearInterval(manualEventCheckInterval);
         setProfileState(prevState => {
             if (!prevState) return null;
             const expiredForHistory: OrderHistoryItem[] = prevState.activeOrders.map(o => ({
@@ -230,196 +219,201 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
         });
     }, adminSettings.marketDurationMinutes * 60 * 1000 + MARKET_OPEN_DELAY_MS);
 
-    const getSettlementDelay = () => {
-        const marketDurationMs = adminSettings.marketDurationMinutes * 60 * 1000;
-        switch (adminSettings.settlementCycle) {
-            case 'T+1': return marketDurationMs / 2.5; 
-            case 'T+3': return marketDurationMs;
-            case 'T+2':
-            default: return marketDurationMs * (2 / 3);
-        }
+    return () => {
+        clearTimeout(marketOpenTimer);
+        clearTimeout(marketCloseTimer);
     };
-    
+    // This effect is intended to run only once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminSettings.marketDurationMinutes]); // Depends on settings that determine market length. showToast and setters are stable.
+
+  // Effect 1b: Events Engine
+  useEffect(() => {
+    if (marketStatus !== 'OPEN') return;
+
+    // Event management (random and manual) runs throughout the open market session
+    const eventInterval = setInterval(() => {
+        // Check for manually triggered events from admin
+        const manualEventJSON = localStorage.getItem('yin_trade_manual_event');
+        if (manualEventJSON) {
+            try {
+                const { eventName, timestamp } = JSON.parse(manualEventJSON);
+                if (Date.now() - timestamp < 5000) {
+                    const template = MARKET_EVENTS_TEMPLATES.find(e => e.title === eventName);
+                    if (template) {
+                        const duration = 20000 + Math.random() * 20000;
+                        const newEvent: MarketEvent = { ...template, duration, expiresAt: Date.now() + duration };
+                        setActiveMarketEvent(newEvent);
+                        showToast('info', newEvent.title);
+                    }
+                    localStorage.removeItem('yin_trade_manual_event');
+                }
+            } catch (e) {
+                console.error("Could not parse manual event", e);
+                localStorage.removeItem('yin_trade_manual_event');
+            }
+        }
+        
+        // Random event logic using functional update to avoid stale state
+        setActiveMarketEvent(currentEvent => {
+            if (currentEvent && Date.now() >= currentEvent.expiresAt) {
+                showToast('info', "The market has stabilized.");
+                return null;
+            } else if (!currentEvent && Math.random() < adminSettings.eventFrequency) {
+                const template = MARKET_EVENTS_TEMPLATES[Math.floor(Math.random() * MARKET_EVENTS_TEMPLATES.length)];
+                const duration = 20000 + Math.random() * 20000;
+                const newEvent: MarketEvent = { ...template, duration, expiresAt: Date.now() + duration };
+                showToast('info', newEvent.title);
+                return newEvent;
+            }
+            return currentEvent; // no change
+        });
+    }, 2000); // Check for events every 2 seconds
+
+    return () => {
+        clearInterval(eventInterval);
+    };
+  }, [marketStatus, adminSettings.eventFrequency, showToast]);
+
+  // Effect 2: Price Ticker Engine
+  useEffect(() => {
+    if (marketStatus !== 'OPEN') return; // Only run when market is open
+
     const getTickInterval = () => {
         switch(adminSettings.simulationSpeed) {
             case 'Slow': return 5000;
             case 'Fast': return 1500;
-            case 'Normal':
-            default: return 3000;
+            case 'Normal': default: return 3000;
         }
     };
     
-    const getPendingDuration = () => {
-        switch(adminSettings.simulationSpeed) {
-            case 'Slow': return 8000;
-            case 'Fast': return 2500;
-            case 'Normal':
-            default: return 5000;
-        }
-    }
-
-    const TRADING_DAYS_PER_YEAR = 252; // Standard assumption
-    const dt = 1 / TRADING_DAYS_PER_YEAR; // Time step, assuming each tick represents a fraction of a day
+    const TRADING_DAYS_PER_YEAR = 252;
+    const dt = 1 / TRADING_DAYS_PER_YEAR;
 
     const tickInterval = setInterval(() => {
-        if (marketStatus !== 'OPEN') return;
-
-        // Market Event Engine
-        if (activeMarketEvent && Date.now() >= activeMarketEvent.expiresAt) {
-            setActiveMarketEvent(null);
-            showToast('info', "The market has stabilized.");
-        } else if (!activeMarketEvent && Math.random() < adminSettings.eventFrequency) {
-            const template = MARKET_EVENTS_TEMPLATES[Math.floor(Math.random() * MARKET_EVENTS_TEMPLATES.length)];
-            const duration = 20000 + Math.random() * 20000; // 20-40 seconds
-            const newEvent: MarketEvent = {
-                ...template,
-                duration,
-                expiresAt: Date.now() + duration,
-            };
-            setActiveMarketEvent(newEvent);
-            showToast('info', newEvent.title);
-        }
-
         setStocks(prevStocks => {
-            // Factor in interest rates: higher rates apply drag on the market drift
             const interestRateDrag = adminSettings.interestRate * 0.5;
             const currentDrift = adminSettings.baseDrift - interestRateDrag + (activeMarketEvent?.driftModifier || 0);
             const currentVolatility = adminSettings.baseVolatility + (activeMarketEvent?.volatilityModifier || 0);
 
-            const updatedStocks = prevStocks.map(stock => {
-                // Geometric Brownian Motion for price simulation
-                const z = Math.sqrt(-2.0 * Math.log(Math.random())) * Math.cos(2.0 * Math.PI * Math.random()); // Standard normal
+            return prevStocks.map(stock => {
+                const z = Math.sqrt(-2.0 * Math.log(Math.random())) * Math.cos(2.0 * Math.PI * Math.random());
                 const driftComponent = (currentDrift + stock.trend - 0.5 * Math.pow(currentVolatility + stock.volatility, 2)) * dt;
                 const volatilityComponent = (currentVolatility + stock.volatility) * z * Math.sqrt(dt);
                 const stockReturn = Math.exp(driftComponent + volatilityComponent);
-
                 const open = stock.price;
                 const close = Math.max(0.01, open * stockReturn);
-
                 const high = Math.max(open, close) * (1 + Math.random() * (currentVolatility + stock.volatility) * 0.1);
                 const low = Math.min(open, close) * (1 - Math.random() * (currentVolatility + stock.volatility) * 0.1);
-
                 const newOHLC: OHLC = { open, high: parseFloat(high.toFixed(2)), low: parseFloat(low.toFixed(2)), close: parseFloat(close.toFixed(2)) };
-                
                 return { ...stock, lastPrice: stock.price, price: newOHLC.close, priceHistory: [...stock.priceHistory, newOHLC].slice(-50) };
             });
-
-            // Circuit Breaker Logic
-            if (adminSettings.circuitBreakerEnabled && !circuitBreakerTriggered) {
-                const currentIndex = updatedStocks.reduce((sum, s) => sum + s.price, 0) / updatedStocks.length;
-                const marketDrop = (marketOpenIndexPrice - currentIndex) / marketOpenIndexPrice;
-
-                if (marketDrop >= adminSettings.circuitBreakerThreshold) {
-                    setCircuitBreakerTriggered(true);
-                    setMarketStatus('HALTED');
-                    showToast('error', `CIRCUIT BREAKER: Market has dropped ${adminSettings.circuitBreakerThreshold * 100}%. Trading halted!`);
-                    setTimeout(() => {
-                        setMarketStatus('OPEN');
-                        showToast('info', 'Trading has resumed.');
-                    }, adminSettings.circuitBreakerHaltSeconds * 1000);
-                }
-            }
-
-            setProfileState(prevState => {
-                if (!prevState) return null;
-                let newCash = prevState.portfolio.cash;
-                let newHoldings = { ...prevState.portfolio.holdings };
-                let newOrderHistory = [...prevState.orderHistory];
-                const executedOrderIds = new Set<string>();
-                const now = Date.now();
-
-                const settledItems: UnsettledCashItem[] = [];
-                const stillUnsettled = prevState.portfolio.unsettledCash.filter(item => {
-                    if (now >= item.settlesAt) { settledItems.push(item); return false; } return true;
-                });
-
-                if (settledItems.length > 0) {
-                    const totalSettled = settledItems.reduce((sum, item) => sum + item.amount, 0);
-                    newCash += totalSettled;
-                    showToast('info', `GHS ${totalSettled.toFixed(2)} from a sale has settled.`);
-                }
-                let newUnsettledCash = stillUnsettled;
-
-                const processExecution = (order: ActiveOrder, executionPrice: number) => {
-                    let totalValue = order.quantity * executionPrice;
-                    const commission = totalValue * adminSettings.commissionFee;
-
-                    if (order.tradeType === TradeType.BUY) {
-                        const existing = newHoldings[order.symbol];
-                        // Cash was already reserved, so we only need to account for the commission now
-                        newCash -= commission;
-                        if (existing) {
-                            const totalQuantity = existing.quantity + order.quantity;
-                            const totalCost = (existing.avgCost * existing.quantity) + totalValue;
-                            newHoldings[order.symbol] = { ...existing, quantity: totalQuantity, avgCost: totalCost / totalQuantity };
-                        } else {
-                            newHoldings[order.symbol] = { symbol: order.symbol, quantity: order.quantity, avgCost: executionPrice };
-                        }
-                    } else { // SELL
-                        const proceedsAfterCommission = totalValue - commission;
-                        const settlementDelay = getSettlementDelay();
-                        newUnsettledCash = [...newUnsettledCash, { amount: proceedsAfterCommission, settlesAt: Date.now() + settlementDelay }];
-                        const existing = newHoldings[order.symbol];
-                        if (existing.quantity === order.quantity) {
-                            delete newHoldings[order.symbol];
-                        } else {
-                            newHoldings[order.symbol] = { ...existing, quantity: existing.quantity - order.quantity };
-                        }
-                    }
-                    newOrderHistory.unshift({
-                        id: order.id, symbol: order.symbol, name: order.name, tradeType: order.tradeType, orderType: order.orderType, quantity: order.quantity,
-                        finalStatus: OrderStatus.EXECUTED, timestamp: Date.now(), price: executionPrice, total: totalValue,
-                        traderId: order.traderId, traderName: order.traderName,
-                    });
-                    showToast('success', `${order.tradeType} order by ${order.traderName} for ${order.quantity} ${order.symbol} executed at GHS ${executionPrice.toFixed(2)}. Fee: GHS ${commission.toFixed(2)}.`);
-                    executedOrderIds.add(order.id);
-                };
-                
-                const PENDING_DURATION = getPendingDuration();
-                const stillActiveOrders = prevState.activeOrders.map(order => {
-                    const stock = updatedStocks.find(s => s.symbol === order.symbol);
-                    if (!stock || executedOrderIds.has(order.id)) return null;
-
-                    // Promote PENDING orders to WORKING
-                    if (order.status === OrderStatus.PENDING && now >= order.submittedAt + PENDING_DURATION) {
-                        order.status = OrderStatus.WORKING;
-                    }
-                    
-                    // Only try to execute WORKING orders
-                    if (order.status === OrderStatus.WORKING) {
-                        switch (order.orderType) {
-                            case OrderType.MARKET: processExecution(order, stock.price); return null;
-                            case OrderType.LIMIT:
-                                if ((order.tradeType === TradeType.BUY && stock.price <= order.limitPrice!) || (order.tradeType === TradeType.SELL && stock.price >= order.limitPrice!)) {
-                                    processExecution(order, stock.price); return null;
-                                } break;
-                            case OrderType.TRAILING_STOP:
-                                const newHighWaterMark = Math.max(order.highWaterMark!, stock.price);
-                                const newTriggerPrice = newHighWaterMark * (1 - order.trailPercent!);
-                                if (stock.price <= newTriggerPrice) { processExecution(order, stock.price); return null; }
-                                return { ...order, highWaterMark: newHighWaterMark, triggerPrice: newTriggerPrice };
-                        }
-                    }
-                    return order;
-                }).filter((o): o is ActiveOrder => o !== null);
-
-                return {
-                    portfolio: { cash: newCash, unsettledCash: newUnsettledCash, holdings: newHoldings },
-                    activeOrders: stillActiveOrders,
-                    orderHistory: newOrderHistory,
-                };
-            });
-            return updatedStocks;
         });
     }, getTickInterval());
 
-    return () => {
-        clearTimeout(marketOpenTimer);
-        clearTimeout(marketCloseTimer);
-        clearInterval(tickInterval);
-        if (manualEventCheckInterval) clearInterval(manualEventCheckInterval);
-    };
-  }, [marketStatus, showToast, adminSettings]);
+    return () => clearInterval(tickInterval);
+  }, [marketStatus, adminSettings, activeMarketEvent]); // Depends on status to start/stop.
+
+  // Effect 3: Order Processor & Circuit Breaker (Reacts to stock price changes)
+  useEffect(() => {
+      if (marketStatus !== 'OPEN' || !profileState || stocks.every((s, i) => s.price === STOCKS_DATA[i].price)) return;
+
+      // Circuit Breaker Logic
+      if (adminSettings.circuitBreakerEnabled && !circuitBreakerTriggered) {
+          const currentIndex = stocks.reduce((sum, s) => sum + s.price, 0) / stocks.length;
+          const marketDrop = (marketOpenIndexPrice - currentIndex) / marketOpenIndexPrice;
+
+          if (marketDrop >= adminSettings.circuitBreakerThreshold) {
+              setCircuitBreakerTriggered(true);
+              setMarketStatus('HALTED');
+              showToast('error', `CIRCUIT BREAKER: Market has dropped ${adminSettings.circuitBreakerThreshold * 100}%. Trading halted!`);
+              setTimeout(() => {
+                  setMarketStatus('OPEN');
+                  showToast('info', 'Trading has resumed.');
+              }, adminSettings.circuitBreakerHaltSeconds * 1000);
+              return; // Halt processing for this tick
+          }
+      }
+      
+      const getSettlementDelay = () => {
+          const marketDurationMs = adminSettings.marketDurationMinutes * 60 * 1000;
+          switch (adminSettings.settlementCycle) { case 'T+1': return marketDurationMs / 2.5; case 'T+3': return marketDurationMs; case 'T+2': default: return marketDurationMs * (2 / 3); }
+      };
+      const getPendingDuration = () => {
+          switch(adminSettings.simulationSpeed) { case 'Slow': return 8000; case 'Fast': return 2500; case 'Normal': default: return 5000; }
+      }
+
+      setProfileState(prevState => {
+          if (!prevState) return null;
+          let newCash = prevState.portfolio.cash;
+          let newHoldings = { ...prevState.portfolio.holdings };
+          let newOrderHistory = [...prevState.orderHistory];
+          const executedOrderIds = new Set<string>();
+          const now = Date.now();
+
+          const settledItems: UnsettledCashItem[] = [];
+          const stillUnsettled = prevState.portfolio.unsettledCash.filter(item => { if (now >= item.settlesAt) { settledItems.push(item); return false; } return true; });
+          if (settledItems.length > 0) {
+              const totalSettled = settledItems.reduce((sum, item) => sum + item.amount, 0);
+              newCash += totalSettled;
+              showToast('info', `GHS ${totalSettled.toFixed(2)} from a sale has settled.`);
+          }
+          let newUnsettledCash = stillUnsettled;
+
+          const processExecution = (order: ActiveOrder, executionPrice: number) => {
+              let totalValue = order.quantity * executionPrice;
+              const commission = totalValue * adminSettings.commissionFee;
+              if (order.tradeType === TradeType.BUY) {
+                  const existing = newHoldings[order.symbol];
+                  newCash -= commission;
+                  if (existing) {
+                      const totalQuantity = existing.quantity + order.quantity;
+                      const totalCost = (existing.avgCost * existing.quantity) + totalValue;
+                      newHoldings[order.symbol] = { ...existing, quantity: totalQuantity, avgCost: totalCost / totalQuantity };
+                  } else {
+                      newHoldings[order.symbol] = { symbol: order.symbol, quantity: order.quantity, avgCost: executionPrice };
+                  }
+              } else { // SELL
+                  const proceedsAfterCommission = totalValue - commission;
+                  const settlementDelay = getSettlementDelay();
+                  newUnsettledCash = [...newUnsettledCash, { amount: proceedsAfterCommission, settlesAt: Date.now() + settlementDelay }];
+                  const existing = newHoldings[order.symbol];
+                  if (existing.quantity === order.quantity) {
+                      delete newHoldings[order.symbol];
+                  } else {
+                      newHoldings[order.symbol] = { ...existing, quantity: existing.quantity - order.quantity };
+                  }
+              }
+              newOrderHistory.unshift({ id: order.id, symbol: order.symbol, name: order.name, tradeType: order.tradeType, orderType: order.orderType, quantity: order.quantity, finalStatus: OrderStatus.EXECUTED, timestamp: now, price: executionPrice, total: totalValue, traderId: order.traderId, traderName: order.traderName });
+              showToast('success', `${order.tradeType} order by ${order.traderName} for ${order.quantity} ${order.symbol} executed at GHS ${executionPrice.toFixed(2)}. Fee: GHS ${commission.toFixed(2)}.`);
+              executedOrderIds.add(order.id);
+          };
+
+          const PENDING_DURATION = getPendingDuration();
+          const stillActiveOrders = prevState.activeOrders.map(order => {
+              const stock = stocks.find(s => s.symbol === order.symbol);
+              if (!stock || executedOrderIds.has(order.id)) return null;
+              if (order.status === OrderStatus.PENDING && now >= order.submittedAt + PENDING_DURATION) { order.status = OrderStatus.WORKING; }
+              if (order.status === OrderStatus.WORKING) {
+                  switch (order.orderType) {
+                      case OrderType.MARKET: processExecution(order, stock.price); return null;
+                      case OrderType.LIMIT:
+                          if ((order.tradeType === TradeType.BUY && stock.price <= order.limitPrice!) || (order.tradeType === TradeType.SELL && stock.price >= order.limitPrice!)) { processExecution(order, stock.price); return null; }
+                          break;
+                      case OrderType.TRAILING_STOP:
+                          const newHighWaterMark = Math.max(order.highWaterMark!, stock.price);
+                          const newTriggerPrice = newHighWaterMark * (1 - order.trailPercent!);
+                          if (stock.price <= newTriggerPrice) { processExecution(order, stock.price); return null; }
+                          return { ...order, highWaterMark: newHighWaterMark, triggerPrice: newTriggerPrice };
+                  }
+              }
+              return order;
+          }).filter((o): o is ActiveOrder => o !== null);
+
+          return { portfolio: { cash: newCash, unsettledCash: newUnsettledCash, holdings: newHoldings }, activeOrders: stillActiveOrders, orderHistory: newOrderHistory };
+      });
+  // FIX: Added all state dependencies to the dependency array to prevent stale state issues.
+  }, [stocks, marketStatus, profileState, adminSettings, circuitBreakerTriggered, marketOpenIndexPrice, showToast]); // Reacts to stock price changes and other state.
 
   const placeOrder = useCallback((order: TradeOrder) => {
     if (marketStatus !== 'OPEN') {

@@ -3,15 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      // Polyfill `process` for browser environment.
+      // Polyfill `process` for browser environment and inject the API key.
       // In a no-build-step setup, Node.js-style environment variables like `process.env`
       // are not available by default. This script prevents a `ReferenceError` when the
-      // application code tries to access `process.env.API_KEY`. The actual API key is
-      // expected to be injected into this object by the deployment environment
-      // (e.g., via Netlify's "Script injection" feature).
+      // application code tries to access `process.env.API_KEY`.
       if (typeof window.process === 'undefined') {
         window.process = { env: {} };
       }
+      // WARNING: This is for local development and demonstration purposes only.
+      // Do not commit API keys directly into your source code in a real application.
+      window.process.env.API_KEY = "AIzaSyD0pYC3WbVPs0MbYc87shubccb8Bs-S9b0";
     </script>
     <script>
       // Hide the specific Babel warning in this no-build-step environment.
