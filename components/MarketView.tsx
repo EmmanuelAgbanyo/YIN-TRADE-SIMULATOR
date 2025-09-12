@@ -1,23 +1,24 @@
 
 
+
 import React, { useState, useMemo } from 'react';
-import type { Stock, Portfolio, OrderHistoryItem, TradeOrder, NewsHeadline, ActiveOrder, UserProfile, ToastMessage, MarketEvent, MarketStatus } from '../types.js';
-import { TradeType } from '../types.js';
-import PortfolioSummary from './PortfolioSummary.js';
-import HoldingsView from './HoldingsView.js';
-import TradeForm from './TradeForm.js';
-import HistoryView from './HistoryView.js';
-import OrdersView from './OrdersView.js';
-import MarketMovers from './MarketMovers.js';
-import MarketNewsFeed from './MarketNewsFeed.js';
-import StockChartView from './StockChartView.js';
-import { useAIAnalyst } from '../hooks/useAIAnalyst.js';
-import PortfolioAllocationChart from './PortfolioAllocationChart.js';
-import AdminView from './AdminView.js';
-import TeamView from './TeamView.js';
-import AcademyView from './AcademyView.js';
-import MarketEventDisplay from './MarketEventDisplay.js';
-import TradeConfirmationModal from './TradeConfirmationModal.js';
+import type { Stock, Portfolio, OrderHistoryItem, TradeOrder, NewsHeadline, ActiveOrder, UserProfile, ToastMessage, MarketEvent, MarketStatus } from '../types.ts';
+import { TradeType } from '../types.ts';
+import PortfolioSummary from './PortfolioSummary.tsx';
+import HoldingsView from './HoldingsView.tsx';
+import TradeForm from './TradeForm.tsx';
+import HistoryView from './HistoryView.tsx';
+import OrdersView from './OrdersView.tsx';
+import MarketMovers from './MarketMovers.tsx';
+import MarketNewsFeed from './MarketNewsFeed.tsx';
+import StockChartView from './StockChartView.tsx';
+import { useAIAnalyst } from '../hooks/useAIAnalyst.ts';
+import PortfolioAllocationChart from './PortfolioAllocationChart.tsx';
+import AdminView from './AdminView.tsx';
+import TeamView from './TeamView.tsx';
+import AcademyView from './AcademyView.tsx';
+import MarketEventDisplay from './MarketEventDisplay.tsx';
+import TradeConfirmationModal from './TradeConfirmationModal.tsx';
 
 interface MarketViewProps {
   stocks: Stock[];

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { MarketEvent } from '../types.js';
-import Card from './ui/Card.js';
+import type { MarketEvent } from '../types.ts';
+import Card from './ui/Card.tsx';
 
 interface MarketEventDisplayProps {
   event: MarketEvent | null;

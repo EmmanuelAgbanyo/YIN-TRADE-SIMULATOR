@@ -1,9 +1,10 @@
 
 
+
 import React, { useState } from 'react';
-import type { Stock, Message, OHLC } from '../types.js';
-import Card from './ui/Card.js';
-import AIAnalystTerminal from './AIAnalystTerminal.js';
+import type { Stock, Message, OHLC } from '../types.ts';
+import Card from './ui/Card.tsx';
+import AIAnalystTerminal from './AIAnalystTerminal.tsx';
 
 interface AnalystSession {
     messages: Message[];

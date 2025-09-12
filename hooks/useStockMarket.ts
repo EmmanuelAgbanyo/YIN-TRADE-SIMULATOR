@@ -1,16 +1,17 @@
 
 
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-import type { Stock, ProfileState, ToastMessage, NewsHeadline, MarketSentiment, TradeOrder, ActiveOrder, OrderHistoryItem, OHLC, UserProfile, Team, AdminSettings, UnsettledCashItem, MarketEvent, MarketStatus } from '../types.js';
-import { TradeType, OrderType, OrderStatus } from '../types.js';
+import type { Stock, ProfileState, ToastMessage, NewsHeadline, MarketSentiment, TradeOrder, ActiveOrder, OrderHistoryItem, OHLC, UserProfile, Team, AdminSettings, UnsettledCashItem, MarketEvent, MarketStatus } from '../types.ts';
+import { TradeType, OrderType, OrderStatus } from '../types.ts';
 import { 
     DEFAULT_STARTING_CAPITAL, STOCKS_DATA, MARKET_OPEN_DELAY_MS, 
     DEFAULT_ANNUAL_DRIFT, DEFAULT_ANNUAL_VOLATILITY, DEFAULT_EVENT_CHANCE_PER_TICK,
     DEFAULT_MARKET_DURATION_MINUTES, DEFAULT_CIRCUIT_BREAKER_ENABLED, 
     DEFAULT_CIRCUIT_BREAKER_THRESHOLD, DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS, DEFAULT_SIMULATION_SPEED,
     DEFAULT_INTEREST_RATE, DEFAULT_COMMISSION_FEE
-} from '../constants.js';
+} from '../constants.ts';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 

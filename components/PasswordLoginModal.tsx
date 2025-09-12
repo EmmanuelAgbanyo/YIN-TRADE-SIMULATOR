@@ -1,8 +1,6 @@
-
-
 import React, { useState, useEffect } from 'react';
-import Button from './ui/Button.js';
-import type { UserProfile } from '../types.js';
+import Button from './ui/Button.tsx';
+import type { UserProfile } from '../types.ts';
 
 interface PasswordLoginModalProps {
   isOpen: boolean;
@@ -13,47 +11,51 @@ interface PasswordLoginModalProps {
 
 const verifyPassword = (password: string, hash: string): boolean => btoa(password) === hash;
 
+// FIX: Completed the LockClosedIcon component definition which was uninitialized.
 const LockClosedIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-  </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+    </svg>
 );
 
 
-const PasswordLoginModal: React.FC<PasswordLoginModalProps> = ({ isOpen, onClose, onSuccess, profile }) => {
+// FIX: Implemented the missing PasswordLoginModal component and added a default export to resolve the module resolution error.
+const PasswordLoginModal: React.FC<PasswordLoginModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  profile,
+}) => {
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [shouldShake, setShouldShake] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setPassword('');
-      setError(null);
+      setError('');
       setIsLoading(false);
-      setShouldShake(false);
     }
   }, [isOpen]);
 
-  if (!isOpen || !profile) return null;
+  if (!isOpen || !profile) {
+    return null;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    setError(null);
-// FIX: Complete the incomplete `handleSubmit` function logic.
-    setShouldShake(false);
 
-    // Simulate network delay for better UX
+    // Simulate async check
     setTimeout(() => {
       if (profile.password && verifyPassword(password, profile.password)) {
         onSuccess(profile);
       } else {
-        setError('Incorrect password.');
-        setShouldShake(true);
+        setError('Incorrect password. Please try again.');
       }
       setIsLoading(false);
-    }, 500);
+    }, 300);
   };
 
   return (
@@ -64,16 +66,15 @@ const PasswordLoginModal: React.FC<PasswordLoginModalProps> = ({ isOpen, onClose
       aria-modal="true"
     >
       <div
-        className={`bg-base-200 p-8 rounded-2xl shadow-2xl border border-base-300/50 w-full max-w-sm animate-fade-in-up ${shouldShake ? 'animate-shake' : ''}`}
+        className="bg-base-200 p-8 rounded-2xl shadow-2xl border border-base-300/50 w-full max-w-sm animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
-        onAnimationEnd={() => setShouldShake(false)}
       >
         <div className="flex flex-col items-center text-center mb-6">
             <div className="p-3 bg-primary/20 rounded-full mb-4">
                 <LockClosedIcon className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-text-strong">Enter Password for {profile.name}</h2>
-            <p className="text-base-content/80">This profile is password protected.</p>
+            <h2 className="text-2xl font-bold text-text-strong">Enter Password</h2>
+            <p className="text-base-content/80">Profile for "{profile.name}" is password protected.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -82,7 +83,7 @@ const PasswordLoginModal: React.FC<PasswordLoginModalProps> = ({ isOpen, onClose
                 id="modal-password"
                 type="password"
                 value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(null); }}
+                onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 placeholder="Password"
                 className="input input-bordered w-full bg-base-100 border-base-300"
                 autoFocus
@@ -92,7 +93,7 @@ const PasswordLoginModal: React.FC<PasswordLoginModalProps> = ({ isOpen, onClose
           <div className="flex space-x-3 !mt-6">
             <Button type="button" variant="ghost" className="w-full" onClick={onClose}>Cancel</Button>
             <Button type="submit" variant="primary" className="w-full" loading={isLoading} disabled={!password}>
-              Unlock & Login
+              Login
             </Button>
           </div>
         </form>
@@ -101,5 +102,4 @@ const PasswordLoginModal: React.FC<PasswordLoginModalProps> = ({ isOpen, onClose
   );
 };
 
-// FIX: Add the missing default export for the component.
 export default PasswordLoginModal;

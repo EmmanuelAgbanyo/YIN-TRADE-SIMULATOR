@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import type { ActiveOrder, OrderHistoryItem } from '../types.js';
-import { TradeType, OrderStatus } from '../types.js';
-import EmptyState from './ui/EmptyState.js';
-import Card from './ui/Card.js';
-import Button from './ui/Button.js';
-import ConfirmationModal from './ConfirmationModal.js';
+import type { ActiveOrder, OrderHistoryItem } from '../types.ts';
+import { TradeType, OrderStatus } from '../types.ts';
+import EmptyState from './ui/EmptyState.tsx';
+import Card from './ui/Card.tsx';
+import Button from './ui/Button.tsx';
+import ConfirmationModal from './ConfirmationModal.tsx';
 
 interface OrdersViewProps {
   activeOrders: ActiveOrder[];
