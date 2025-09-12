@@ -14,6 +14,7 @@ interface HeaderProps {
     onLogout: () => void;
     onSecureProfile: () => void;
     onCreateTeam: () => void;
+    onViewInviteCode: () => void;
 }
 
 const LogoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -46,6 +47,12 @@ const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const TicketIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-1.5h5.25m-5.25 0h-1.5m-1.5 0H5.625c-.621 0-1.125.504-1.125 1.125v-1.5c0-.621.504-1.125 1.125-1.125H18v4.875c0 .621-.504 1.125-1.125 1.125H5.625c-.621 0-1.125-.504-1.125-1.125v-1.5-1.5H5.625c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125h1.5m9-1.5h-5.25m5.25 0h1.5m1.5 0h.375c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H18v-4.875c0-.621.504-1.125 1.125-1.125h.375c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125h-1.5m-9-1.5h5.25m-5.25 0h-1.5m-1.5 0H5.625c-.621 0-1.125.504-1.125 1.125v-1.5c0-.621.504-1.125 1.125-1.125H18v4.875c0 .621-.504 1.125-1.125 1.125H5.625c-.621 0-1.125-.504-1.125-1.125v-1.5-1.5H5.625c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125h1.5Z" />
+    </svg>
+);
+
 
 const MarketClock: React.FC<{ status: MarketStatus }> = ({ status }) => {
     const statusConfig = {
@@ -67,7 +74,14 @@ const MarketClock: React.FC<{ status: MarketStatus }> = ({ status }) => {
     );
 };
 
-const UserMenu: React.FC<{cash: number; profile: UserProfile; onLogout: () => void; onSecureProfile: () => void; onCreateTeam: () => void}> = ({cash, profile, onLogout, onSecureProfile, onCreateTeam}) => {
+const UserMenu: React.FC<{
+    cash: number;
+    profile: UserProfile;
+    onLogout: () => void;
+    onSecureProfile: () => void;
+    onCreateTeam: () => void;
+    onViewInviteCode: () => void;
+}> = ({ cash, profile, onLogout, onSecureProfile, onCreateTeam, onViewInviteCode }) => {
     const formatter = new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' });
     const [isOpen, setIsOpen] = useState(false);
     const [teamName, setTeamName] = useState<string | null>(null);
@@ -80,9 +94,14 @@ const UserMenu: React.FC<{cash: number; profile: UserProfile; onLogout: () => vo
     
     useEffect(() => {
         if (profile.teamId) {
-            const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
-            const team = teams.find(t => t.id === profile.teamId);
-            setTeamName(team ? team.name : null);
+            try {
+                const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
+                const team = teams.find(t => t.id === profile.teamId);
+                setTeamName(team ? team.name : null);
+            } catch (e) {
+                console.error("Failed to parse teams from localStorage", e);
+                setTeamName(null);
+            }
         } else {
             setTeamName(null);
         }
@@ -103,7 +122,7 @@ const UserMenu: React.FC<{cash: number; profile: UserProfile; onLogout: () => vo
         <div className="relative" ref={menuRef}>
             <div className="flex items-center space-x-4 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
                 <div className="text-right hidden sm:block">
-                    <div className="text-xs text-base-content">{teamName ? `${profile.name} (${teamName})` : profile.name}</div>
+                    <div className="text-xs text-base-content">{profile.name}</div>
                     <div className="font-bold text-text-strong">{formatter.format(cash)}</div>
                 </div>
                 <div className="w-10 h-10 rounded-full themed-bg-gradient flex items-center justify-center text-white font-bold text-lg ring-2 ring-offset-2 ring-offset-base-200 ring-primary/50">
@@ -115,18 +134,24 @@ const UserMenu: React.FC<{cash: number; profile: UserProfile; onLogout: () => vo
                     <div className="px-4 py-3 border-b border-base-300">
                         <p className="text-sm font-semibold text-text-strong truncate">{profile.name}</p>
                         <p className="text-xs text-base-content/70">Trader since: {creationDate}</p>
-                        {teamName && <p className="text-xs text-info font-semibold">Team: {teamName}</p>}
+                        {teamName && <p className="text-xs text-info font-semibold mt-1">Team: {teamName}</p>}
                     </div>
                     {!profile.password && profile.name !== 'Admin' && (
-                        <button onClick={onSecureProfile} className="flex items-center space-x-3 w-full text-left px-4 py-3 text-sm text-success hover:bg-success hover:text-white transition-colors duration-200">
+                        <button onClick={() => { onSecureProfile(); setIsOpen(false); }} className="flex items-center space-x-3 w-full text-left px-4 py-3 text-sm text-success hover:bg-success hover:text-white transition-colors duration-200">
                             <ShieldCheckIcon className="w-5 h-5" />
                             <span>Secure Profile</span>
                         </button>
                     )}
                     {!profile.teamId && profile.name !== 'Admin' && (
-                         <button onClick={onCreateTeam} className="flex items-center space-x-3 w-full text-left px-4 py-3 text-sm text-info hover:bg-info hover:text-white transition-colors duration-200">
+                         <button onClick={() => { onCreateTeam(); setIsOpen(false); }} className="flex items-center space-x-3 w-full text-left px-4 py-3 text-sm text-info hover:bg-info hover:text-white transition-colors duration-200">
                             <UsersIcon className="w-5 h-5" />
                             <span>Create Team</span>
+                        </button>
+                    )}
+                    {profile.isTeamLeader && (
+                         <button onClick={() => { onViewInviteCode(); setIsOpen(false); }} className="flex items-center space-x-3 w-full text-left px-4 py-3 text-sm text-secondary hover:bg-secondary hover:text-white transition-colors duration-200">
+                            <TicketIcon className="w-5 h-5" />
+                            <span>View Invite Code</span>
                         </button>
                     )}
                     <button onClick={onLogout} className="flex items-center space-x-3 w-full text-left px-4 py-3 text-sm text-error hover:bg-error hover:text-white transition-colors duration-200">
@@ -140,7 +165,7 @@ const UserMenu: React.FC<{cash: number; profile: UserProfile; onLogout: () => vo
 };
 
 
-const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, cash, marketSentiment, marketStatus, onOpenGuide, profile, onLogout, onSecureProfile, onCreateTeam }) => {
+const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, cash, marketSentiment, marketStatus, onOpenGuide, profile, onLogout, onSecureProfile, onCreateTeam, onViewInviteCode }) => {
   return (
     <header className="bg-base-200/80 backdrop-blur-md sticky top-0 z-20 border-b border-base-300/70 shadow-sm">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
@@ -164,7 +189,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, cash, marketSentime
             </button>
             <ThemeSwitcher theme={theme} toggleTheme={toggleTheme} />
             <div className="h-8 w-px bg-base-300/70 hidden md:block"></div>
-            <UserMenu cash={cash} profile={profile} onLogout={onLogout} onSecureProfile={onSecureProfile} onCreateTeam={onCreateTeam} />
+            <UserMenu cash={cash} profile={profile} onLogout={onLogout} onSecureProfile={onSecureProfile} onCreateTeam={onCreateTeam} onViewInviteCode={onViewInviteCode} />
         </div>
       </div>
     </header>

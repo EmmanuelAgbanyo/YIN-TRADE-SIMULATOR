@@ -153,7 +153,6 @@ const HistoryView: React.FC<HistoryViewProps> = ({ history }) => {
                     <label className="block text-xs font-medium mb-1 text-base-content/80">Type</label>
                     <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="select select-bordered select-sm w-full bg-base-100 border-base-300 focus:ring-primary focus:border-primary">
                         <option value="ALL">All Types</option>
-                        {/* FIX: Corrected typo in option closing tag. */}
                         <option value={TradeType.BUY}>Buy</option>
                         <option value={TradeType.SELL}>Sell</option>
                     </select>

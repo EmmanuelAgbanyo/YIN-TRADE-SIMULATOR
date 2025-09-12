@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Module } from './types';
 import LessonContent from './components/LessonContent';
@@ -11,7 +12,6 @@ export const ACADEMY_MODULES: Module[] = [
       {
         id: 'intro-to-trading',
         title: 'Introduction to Stock Trading',
-        // FIX: Explicitly pass children as a property in the props object to match the LessonContentProps interface.
         content: React.createElement(LessonContent, { title: "Welcome to the Market!", children: [
           React.createElement("p", { key: 1 }, "Stock trading is the buying and selling of shares in a publicly-traded company. When you buy a stock, you're purchasing a small piece of ownership in that company."),
           React.createElement("p", { key: 2 }, "The goal is simple: ", React.createElement("strong", null, "Buy low, sell high."), " The value of your stocks will fluctuate based on the company's performance, industry trends, and overall market sentiment. This simulator lets you experience these dynamics without any real financial risk.")
@@ -21,7 +21,6 @@ export const ACADEMY_MODULES: Module[] = [
       {
         id: 'market-orders',
         title: 'Understanding Market Orders',
-        // FIX: Explicitly pass children as a property in the props object to match the LessonContentProps interface.
         content: React.createElement(LessonContent, { title: "Executing Trades: The Market Order", children: [
           React.createElement("p", { key: 1 }, "A ", React.createElement("strong", null, "Market Order"), " is the most straightforward way to buy or sell a stock. It tells your broker to execute the trade immediately at the best available price in the current market."),
           React.createElement("p", { key: 2 }, React.createElement("strong", null, "Pros:"), " Guaranteed and fast execution."),
@@ -39,7 +38,6 @@ export const ACADEMY_MODULES: Module[] = [
        {
         id: 'limit-orders',
         title: 'Using Limit Orders for Price Control',
-        // FIX: Explicitly pass children as a property in the props object to match the LessonContentProps interface.
         content: React.createElement(LessonContent, { title: "Precision Trading: The Limit Order", children: [
           React.createElement("p", { key: 1 }, "A ", React.createElement("strong", null, "Limit Order"), " gives you control over the price at which your trade is executed. You specify the maximum price you're willing to pay for a stock (for a buy order) or the minimum price you're willing to accept (for a sell order)."),
           React.createElement("p", { key: 2 }, React.createElement("strong", null, "Pros:"), " You're protected from paying more or selling for less than you want."),
@@ -64,7 +62,6 @@ export const ACADEMY_MODULES: Module[] = [
        {
         id: 'trailing-stop-orders',
         title: 'Protecting Profits with Trailing Stops',
-        // FIX: Explicitly pass children as a property in the props object to match the LessonContentProps interface.
         content: React.createElement(LessonContent, { title: "Dynamic Profit Protection: The Trailing Stop", children: [
           React.createElement("p", { key: 1 }, "A ", React.createElement("strong", null, "Trailing Stop Order"), " is a powerful tool for risk management, designed to lock in profits while a stock price is rising. It's only used for selling."),
           React.createElement("p", { key: 2 }, "You set a 'trail' as a percentage (e.g., 10%) below the current market price. As the stock price increases, the stop-loss price moves up with it, always maintaining that 10% distance. If the stock price falls and hits your trailing stop price, a market order is triggered to sell your shares."),
@@ -82,7 +79,6 @@ export const ACADEMY_MODULES: Module[] = [
       {
         id: 'risk-management',
         title: 'Fundamentals of Risk Management',
-        // FIX: Explicitly pass children as a property in the props object to match the LessonContentProps interface.
         content: React.createElement(LessonContent, { title: "Protecting Your Capital", children: [
           React.createElement("p", { key: 1 }, "Professional trading isn't just about picking winners; it's about managing losers. ", React.createElement("strong", null, "Risk management"), " is the foundation of long-term success."),
           React.createElement("h4", { key: 2 }, "The 1% Rule"),

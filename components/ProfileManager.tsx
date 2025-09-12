@@ -61,8 +61,10 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
   }
 
   const handleProfileSelect = (profile: UserProfile) => {
-    if (profile.password) {
-        setProfileForPasswordLogin(profile);
+    if (profile.password && verifyPassword(loginPassword, profile.password)) {
+        onProfileSelected(profile);
+    } else if (profile.password) {
+        triggerError('Incorrect password.');
     } else {
         onProfileSelected(profile);
     }
@@ -88,7 +90,18 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
         const profile = profiles.find(p => p.name.toLowerCase() === loginName.toLowerCase());
         
         if (profile) {
-            handleProfileSelect(profile);
+            // Updated logic: a profile can be password-protected or not.
+            // If it is, the password MUST be provided in the login form.
+            if (profile.password) {
+                 if (verifyPassword(loginPassword, profile.password)) {
+                    onProfileSelected(profile);
+                } else {
+                    triggerError('Incorrect password.');
+                }
+            } else {
+                // If profile is not password protected, log in directly.
+                onProfileSelected(profile);
+            }
         } else {
             triggerError('Profile not found.');
         }
@@ -109,28 +122,35 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
     setIsLoading(true);
 
     setTimeout(() => {
+        const newProfileId = `user_${Date.now()}`;
         let teamId: string | undefined = undefined;
 
         if (inviteCode.trim()) {
-            const invites: TeamInvite[] = JSON.parse(localStorage.getItem('yin_trade_invites') || '[]');
-            const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
-            const validInvite = invites.find(inv => inv.code === inviteCode.trim());
-            
-            if (!validInvite) {
-                triggerError('Invalid invite code.');
+            try {
+                const invites: TeamInvite[] = JSON.parse(localStorage.getItem('yin_trade_invites') || '[]');
+                const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
+                const validInvite = invites.find(inv => inv.code === inviteCode.trim());
+                
+                if (!validInvite) {
+                    triggerError('Invalid invite code.');
+                    setIsLoading(false);
+                    return;
+                }
+                teamId = validInvite.teamId;
+                const teamIndex = teams.findIndex(t => t.id === teamId);
+                if (teamIndex !== -1) {
+                    teams[teamIndex].memberIds.push(newProfileId);
+                    localStorage.setItem('yin_trade_teams', JSON.stringify(teams));
+                }
+            } catch (e) {
+                triggerError('Error processing invite code.');
                 setIsLoading(false);
                 return;
             }
-            teamId = validInvite.teamId;
-            const teamIndex = teams.findIndex(t => t.id === teamId);
-            if (teamIndex !== -1) {
-                teams[teamIndex].memberIds.push(`user_${Date.now()}`); // We'll use the ID generated below
-            }
-             localStorage.setItem('yin_trade_teams', JSON.stringify(teams));
         }
 
         const newProfile: UserProfile = {
-            id: `user_${Date.now()}`,
+            id: newProfileId,
             name: signupName.trim(),
             createdAt: Date.now(),
             password: hashPassword(signupPassword),
@@ -139,19 +159,6 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
         };
 
         const updatedProfiles = [...profiles, newProfile];
-        // If they joined a team, update the member list with the correct ID now
-        if (teamId) {
-             const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
-             const teamIndex = teams.findIndex(t => t.id === teamId);
-             if (teamIndex !== -1) {
-                 const memberIndex = teams[teamIndex].memberIds.findIndex(id => id.startsWith('user_'));
-                 if (memberIndex !== -1) {
-                     teams[teamIndex].memberIds[memberIndex] = newProfile.id;
-                     localStorage.setItem('yin_trade_teams', JSON.stringify(teams));
-                 }
-             }
-        }
-
         setProfiles(updatedProfiles);
         localStorage.setItem('yin_trade_profiles', JSON.stringify(updatedProfiles));
         onProfileSelected(newProfile);
@@ -160,6 +167,12 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
   
   const toggleView = (v: 'login' | 'signup') => {
       setError('');
+      setLoginName('');
+      setLoginPassword('');
+      setSignupName('');
+      setSignupPassword('');
+      setSignupConfirmPassword('');
+      setInviteCode('');
       setView(v);
   }
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { UserProfile, AcademyProgress, Lesson, Module } from '../types';
 import Card from './ui/Card';

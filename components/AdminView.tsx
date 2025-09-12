@@ -1,7 +1,6 @@
 
-// FIX: Imported 'useCallback' from React.
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { UserProfile, ProfileState, Stock, Team, AdminSettings, ToastMessage, MarketEvent, Module } from '../types.ts';
+import type { UserProfile, ProfileState, Stock, Team, AdminSettings, ToastMessage, Module } from '../types.ts';
 import Card from './ui/Card.tsx';
 import { 
     DEFAULT_STARTING_CAPITAL, DEFAULT_ANNUAL_DRIFT, DEFAULT_ANNUAL_VOLATILITY, 
@@ -205,54 +204,51 @@ const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
     useEffect(() => { loadData(); }, [loadData]);
     useEffect(() => { setIsDirty(JSON.stringify(initialSettings) !== JSON.stringify(formSettings)); }, [formSettings, initialSettings]);
     
-    const handleSettingsSave = () => {
+    const handleSettingsSave = useCallback(() => {
         if (!formSettings) return;
         localStorage.setItem('yin_trade_admin_settings', JSON.stringify(formSettings));
         setInitialSettings(formSettings);
         setToast({ type: 'success', text: `Settings saved! Changes will apply on the next market session.` });
-    };
+    }, [formSettings, setToast]);
 
-    const handleVideoLinksSave = () => {
+    const handleVideoLinksSave = useCallback(() => {
         localStorage.setItem('yin_trade_academy_videos', JSON.stringify(videoLinks));
         setToast({ type: 'success', text: `Academy video links have been updated.` });
-    };
+    }, [videoLinks, setToast]);
 
-    const handleResetAllData = () => {
+    const handleResetAllData = useCallback(() => {
         Object.keys(localStorage).forEach(key => { if (key.startsWith('yin_trade_')) localStorage.removeItem(key); });
         setIsResetModalOpen(false); setResetConfirmationText('');
         setToast({ type: 'success', text: 'All trader data has been reset!'});
         loadData();
-    };
+    }, [setToast, loadData]);
 
-    const handleBroadcast = () => {
+    const handleBroadcast = useCallback(() => {
         if (!broadcastMessage.trim()) return;
         localStorage.setItem('yin_trade_broadcast', JSON.stringify({ message: broadcastMessage, timestamp: Date.now() }));
         setToast({ type: 'success', text: 'Broadcast sent to all users!' });
         setBroadcastMessage('');
-    };
+    }, [broadcastMessage, setToast]);
     
-    const handleTriggerEvent = () => {
+    const handleTriggerEvent = useCallback(() => {
         if (!manualEvent) return;
         localStorage.setItem('yin_trade_manual_event', JSON.stringify({ eventName: manualEvent, timestamp: Date.now() }));
         setToast({ type: 'info', text: `Event "${manualEvent}" triggered!` });
         setManualEvent('');
-    };
+    }, [manualEvent, setToast]);
     
     const handleManageUser = (profileData: ProfileSummaryData) => { setSelectedUser(profileData); setIsManageUserModalOpen(true); };
 
-    const handleResetProfile = (profileId: string) => {
-        const leaderProfile = allProfilesData.find(p => p.profile.isTeamLeader && p.profile.id === profileId);
-        if (leaderProfile) { // Resetting a team leader resets the whole team's shared state
-            localStorage.removeItem(`yin_trade_profile_${profileId}`);
-            setToast({ type: 'success', text: `Team portfolio for ${leaderProfile.profile.name} has been reset.` });
-        } else {
-            localStorage.removeItem(`yin_trade_profile_${profileId}`);
-            setToast({ type: 'success', text: `Profile for ${selectedUser?.profile.name} has been reset.` });
-        }
+    const handleResetProfile = useCallback((profileId: string) => {
+        const profileData = allProfilesData.find(p => p.profile.id === profileId);
+        if (!profileData) return;
+        const key = `yin_trade_profile_${profileData.profile.teamId ? allTeams.find(t=>t.id === profileData.profile.teamId)?.leaderId : profileId}`;
+        localStorage.removeItem(key);
+        setToast({ type: 'success', text: `Portfolio for ${profileData.profile.name} has been reset.` });
         loadData();
-    };
+    }, [allProfilesData, allTeams, setToast, loadData]);
 
-    const handleAdjustCash = (profileId: string, amount: number) => {
+    const handleAdjustCash = useCallback((profileId: string, amount: number) => {
         const profileData = allProfilesData.find(p => p.profile.id === profileId);
         if (!profileData) return;
         const key = `yin_trade_profile_${profileData.profile.teamId ? allTeams.find(t=>t.id === profileData.profile.teamId)?.leaderId : profileId}`;
@@ -264,7 +260,7 @@ const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
             setToast({ type: 'success', text: `GHS ${amount.toFixed(2)} ${amount > 0 ? 'added to' : 'removed from'} ${profileData.profile.name}.` });
             loadData();
         }
-    };
+    }, [allProfilesData, allTeams, setToast, loadData]);
     
     const totalUsers = allProfilesData.length;
     const soloAndLeaderProfiles = useMemo(() => allProfilesData.filter(p => p.profile.isTeamLeader || !p.profile.teamId), [allProfilesData]);

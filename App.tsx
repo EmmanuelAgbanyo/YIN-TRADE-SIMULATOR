@@ -11,6 +11,7 @@ import type { UserProfile, ToastMessage, Team, TeamInvite } from './types.ts';
 import ProfileManager from './components/ProfileManager.tsx';
 import SetPasswordModal from './components/SetPasswordModal.tsx';
 import CreateTeamModal from './components/CreateTeamModal.tsx';
+import TeamInviteModal from './components/TeamInviteModal.tsx';
 import Footer from './components/Footer.tsx';
 import SplashScreen from './components/SplashScreen.tsx';
 import ChatbotWidget from './components/ChatbotWidget.tsx';
@@ -25,6 +26,8 @@ const App: React.FC = () => {
   const [showGuide, setShowGuide] = useState(false);
   const [isSetPasswordModalOpen, setIsSetPasswordModalOpen] = useState(false);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState<{ teamName: string; code: string } | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(() => {
@@ -35,9 +38,10 @@ const App: React.FC = () => {
           return profiles.find(p => p.id === activeProfileId) || null;
       }
     } catch (e) {
-      console.error("Error loading profile from localStorage", e);
+      console.error("Error loading profile from localStorage, clearing data.", e);
       // Clear potentially corrupt data
       localStorage.removeItem('yin_trade_active_profile_id');
+      localStorage.removeItem('yin_trade_profiles'); // <-- Enhanced data integrity
     }
     return null;
   });
@@ -112,6 +116,8 @@ const App: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('yin_trade_active_profile_id');
     setActiveProfile(null);
+    setIsInviteModalOpen(false);
+    setInviteInfo(null);
   };
 
   const handleSecureProfile = (password: string) => {
@@ -139,12 +145,15 @@ const App: React.FC = () => {
     const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
     const invites: TeamInvite[] = JSON.parse(localStorage.getItem('yin_trade_invites') || '[]');
     
+    const newTeamId = `team_${Date.now()}`;
+    const newProfileId = activeProfile.id;
+
     // Create the team
     const newTeam: Team = {
-      id: `team_${Date.now()}`,
+      id: newTeamId,
       name: teamName,
-      leaderId: activeProfile.id,
-      memberIds: [activeProfile.id],
+      leaderId: newProfileId,
+      memberIds: [newProfileId],
     };
     teams.push(newTeam);
     localStorage.setItem('yin_trade_teams', JSON.stringify(teams));
@@ -168,7 +177,23 @@ const App: React.FC = () => {
     }
 
     setActiveProfile(updatedProfile);
-    setToast({ type: 'success', text: `Team "${teamName}" created successfully!` });
+    setInviteInfo({ teamName: newTeam.name, code: newInvite.code });
+    setIsInviteModalOpen(true);
+  };
+
+  const handleViewInviteCode = () => {
+    if (!activeProfile?.isTeamLeader || !activeProfile.teamId) return;
+    const invites: TeamInvite[] = JSON.parse(localStorage.getItem('yin_trade_invites') || '[]');
+    const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
+    const team = teams.find(t => t.id === activeProfile.teamId);
+    const invite = invites.find(i => i.teamId === activeProfile.teamId);
+
+    if (team && invite) {
+        setInviteInfo({ teamName: team.name, code: invite.code });
+        setIsInviteModalOpen(true);
+    } else {
+        setToast({ type: 'error', text: 'Could not find invite code for your team.' });
+    }
   };
 
 
@@ -197,6 +222,7 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         onSecureProfile={() => setIsSetPasswordModalOpen(true)}
         onCreateTeam={() => setIsCreateTeamModalOpen(true)}
+        onViewInviteCode={handleViewInviteCode}
       />
       <StockTicker stocks={stockMarket.stocks} />
       <main className="flex-grow w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
@@ -229,6 +255,12 @@ const App: React.FC = () => {
         isOpen={isCreateTeamModalOpen}
         onClose={() => setIsCreateTeamModalOpen(false)}
         onCreateTeam={handleCreateTeam}
+      />
+      <TeamInviteModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        teamName={inviteInfo?.teamName || ''}
+        inviteCode={inviteInfo?.code || ''}
       />
       <Footer />
       <ChatbotWidget
