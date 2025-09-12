@@ -20,13 +20,14 @@ const TradeForm: React.FC<TradeFormProps> = ({ stocks, portfolio, onPlaceOrder, 
   const [quantity, setQuantity] = useState<string>('');
   const [limitPrice, setLimitPrice] = useState<string>('');
   const [trailPercent, setTrailPercent] = useState<string>('5');
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (selectedStock) {
       setSymbol(selectedStock.symbol);
       setCurrentTradeType(tradeType);
       setQuantity('');
+      setErrors({});
     }
   }, [selectedStock, tradeType]);
   
@@ -51,22 +52,38 @@ const TradeForm: React.FC<TradeFormProps> = ({ stocks, portfolio, onPlaceOrder, 
   const availableShares = portfolio.holdings[symbol]?.quantity || 0;
   
   useEffect(() => {
-    setValidationError(null);
-    if (numQuantity <= 0) return;
+    const newErrors: { [key: string]: string } = {};
 
-    if (currentTradeType === TradeType.BUY) {
-      if (totalCost > portfolio.cash) setValidationError('Total cost exceeds available cash.');
-    } else { // SELL
-      if (numQuantity > availableShares) setValidationError('Quantity exceeds available shares.');
+    if (numQuantity > 0) {
+      if (currentTradeType === TradeType.BUY) {
+        if (totalCost > portfolio.cash) {
+          newErrors.quantity = 'Total cost exceeds available cash.';
+        }
+      } else { // SELL
+        if (numQuantity > availableShares) {
+          newErrors.quantity = 'Quantity exceeds available shares.';
+        }
+      }
     }
-    if (orderType === OrderType.LIMIT && numLimitPrice <= 0) setValidationError('Limit price must be positive.');
-    if (orderType === OrderType.TRAILING_STOP && (parseFloat(trailPercent) <= 0 || parseFloat(trailPercent) >= 100)) setValidationError('Trail % must be between 0 and 100.');
+    
+    if (orderType === OrderType.LIMIT && limitPrice !== '' && numLimitPrice <= 0) {
+      newErrors.limitPrice = 'Limit price must be positive.';
+    }
 
-  }, [numQuantity, totalCost, currentTradeType, portfolio.cash, availableShares, orderType, numLimitPrice, trailPercent]);
+    if (orderType === OrderType.TRAILING_STOP) {
+      const numTrail = parseFloat(trailPercent);
+      if (isNaN(numTrail) || numTrail <= 0 || numTrail >= 100) {
+          newErrors.trailPercent = 'Trail % must be between 0 and 100.';
+      }
+    }
+
+    setErrors(newErrors);
+  }, [quantity, limitPrice, trailPercent, currentTradeType, orderType, totalCost, portfolio.cash, availableShares, symbol, stocks, portfolio.holdings]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validationError || !symbol || numQuantity <= 0 || marketStatus !== 'OPEN') return;
+    if (Object.keys(errors).length > 0 || !symbol || numQuantity <= 0 || marketStatus !== 'OPEN') return;
     onPlaceOrder({
       symbol,
       quantity: numQuantity,
@@ -121,17 +138,20 @@ const TradeForm: React.FC<TradeFormProps> = ({ stocks, portfolio, onPlaceOrder, 
           <div>
             <label htmlFor="shares" className="block text-sm font-medium mb-1 text-base-content/80">Shares</label>
             <input id="shares" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input input-bordered w-full bg-base-100 border-base-300" placeholder="e.g., 100" min="1" required />
+            {errors.quantity && <p className="text-error text-xs mt-1">{errors.quantity}</p>}
           </div>
           
           {orderType === OrderType.LIMIT ? (
             <div>
               <label htmlFor="limitPrice" className="block text-sm font-medium mb-1 text-base-content/80">Limit Price</label>
               <input id="limitPrice" type="number" value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)} className="input input-bordered w-full bg-base-100 border-base-300" placeholder="e.g., 1.60" step="0.01" min="0.01" required />
+              {errors.limitPrice && <p className="text-error text-xs mt-1">{errors.limitPrice}</p>}
             </div>
           ) : orderType === OrderType.TRAILING_STOP ? (
             <div>
               <label htmlFor="trailPercent" className="block text-sm font-medium mb-1 text-base-content/80">Trail %</label>
               <input id="trailPercent" type="number" value={trailPercent} onChange={(e) => setTrailPercent(e.target.value)} className="input input-bordered w-full bg-base-100 border-base-300" placeholder="e.g., 5" step="0.1" required />
+              {errors.trailPercent && <p className="text-error text-xs mt-1">{errors.trailPercent}</p>}
             </div>
           ) : (
             <div>
@@ -148,11 +168,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ stocks, portfolio, onPlaceOrder, 
             </div>
         </div>
 
-        <div className="h-6 pt-2 flex items-center justify-center">
-          {validationError && <p className="text-error text-sm font-semibold">{validationError}</p>}
-        </div>
-
-        <Button type="submit" className="w-full" variant={currentTradeType === TradeType.BUY ? 'success' : 'error'} disabled={!!validationError || !symbol || !quantity || numQuantity <= 0 || marketStatus !== 'OPEN'}>
+        <Button type="submit" className="w-full" variant={currentTradeType === TradeType.BUY ? 'success' : 'error'} disabled={Object.keys(errors).length > 0 || !symbol || !quantity || numQuantity <= 0 || marketStatus !== 'OPEN'}>
           {getButtonText()}
         </Button>
       </form>
