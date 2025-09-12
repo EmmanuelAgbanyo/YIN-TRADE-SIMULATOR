@@ -1,7 +1,3 @@
-<div align="center">
-  <img width="1200" height="475" alt="YIN Trade Simulator Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # YIN Trade Simulator
 
 YIN Trade Simulator is a tool designed to help young professionals and students learn how trade works through interactive simulations. This project aims to provide practical insights into trading mechanisms and strategies in a safe, educational environment.
