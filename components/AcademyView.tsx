@@ -1,5 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+
+
+import React, { useState, useEffect, SVGProps } from 'react';
 import type { UserProfile, AcademyProgress, Lesson, Module } from '../types';
 import Card from './ui/Card';
 import { ACADEMY_MODULES } from '../academy-content';
@@ -11,27 +13,41 @@ interface AcademyViewProps {
   profile: UserProfile;
 }
 
+// FIX: Added trailing comma to generic to avoid potential parsing issues.
+const safeJsonParse = <T,>(key: string, defaultValue: T): T => {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error parsing JSON from localStorage key "${key}":`, error);
+        localStorage.removeItem(key); // Clear corrupted data
+        return defaultValue;
+    }
+};
+
 // Icons
-const BookOpenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+// FIX: Updated component to use explicit SVGProps import to fix type resolution error.
+const BookOpenIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
     </svg>
 );
-const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const CheckCircleIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
 );
-const LockClosedIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const LockClosedIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
     <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
   </svg>
 );
-const ChevronLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const ChevronLeftIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
   </svg>
 );
 
-const AcademyView: React.FC<AcademyViewProps> = ({ profile }) => {
+// FIX: Switched to a named export to resolve module resolution error.
+export const AcademyView: React.FC<AcademyViewProps> = ({ profile }) => {
     const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
     const [activeModule, setActiveModule] = useState<Module | null>(null);
     const [progress, setProgress] = useState<AcademyProgress>({});
@@ -40,13 +56,11 @@ const AcademyView: React.FC<AcademyViewProps> = ({ profile }) => {
     const progressKey = `yin_trade_academy_progress_${profile.id}`;
 
     useEffect(() => {
-        try {
-            const savedProgress = localStorage.getItem(progressKey);
-            if (savedProgress) setProgress(JSON.parse(savedProgress));
-            
-            const savedVideos = localStorage.getItem('yin_trade_academy_videos');
-            if (savedVideos) setCustomVideos(JSON.parse(savedVideos));
-        } catch (e) { console.error("Failed to load academy data", e); }
+        const savedProgress = safeJsonParse<AcademyProgress>(progressKey, {});
+        setProgress(savedProgress);
+        
+        const savedVideos = safeJsonParse<Record<string, string>>('yin_trade_academy_videos', {});
+        setCustomVideos(savedVideos);
     }, [progressKey]);
 
     const handleCompleteQuiz = (lessonId: string, score: number) => {
@@ -164,5 +178,3 @@ const AcademyView: React.FC<AcademyViewProps> = ({ profile }) => {
         </Card>
     );
 };
-
-export default AcademyView;

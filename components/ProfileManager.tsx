@@ -1,7 +1,9 @@
 
 
 
-import React, { useState, useEffect } from 'react';
+
+
+import React, { useState, useEffect, SVGProps } from 'react';
 import type { UserProfile, Team, TeamInvite } from '../types.ts';
 import Button from './ui/Button.tsx';
 import ThemeSwitcher from './ui/ThemeSwitcher.tsx';
@@ -12,6 +14,17 @@ import PasswordLoginModal from './PasswordLoginModal.tsx';
 const hashPassword = (password: string): string => btoa(password);
 const verifyPassword = (password: string, hash: string): boolean => btoa(password) === hash;
 
+// FIX: Added trailing comma to generic to avoid potential parsing issues.
+const safeJsonParse = <T,>(key: string, defaultValue: T): T => {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error parsing JSON from localStorage key "${key}":`, error);
+        localStorage.removeItem(key); // Clear corrupted data
+        return defaultValue;
+    }
+};
 
 interface ProfileManagerProps {
   onProfileSelected: (profile: UserProfile) => void;
@@ -19,13 +32,15 @@ interface ProfileManagerProps {
   toggleTheme: () => void;
 }
 
-const LogoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+// FIX: Updated component to use explicit SVGProps import to fix type resolution error.
+const LogoIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
     </svg>
 );
 
-const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, theme, toggleTheme }) => {
+// FIX: Switched to a named export to resolve module resolution error.
+export const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, theme, toggleTheme }) => {
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [view, setView] = useState<'login' | 'signup'>('login');
   
@@ -46,15 +61,8 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
   const [profileForPasswordLogin, setProfileForPasswordLogin] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    try {
-      const storedProfiles = localStorage.getItem('yin_trade_profiles');
-      if (storedProfiles) {
-        setProfiles(JSON.parse(storedProfiles));
-      }
-    } catch (e) {
-      console.error("Failed to load profiles:", e);
-      setProfiles([]);
-    }
+    const storedProfiles = safeJsonParse<UserProfile[]>('yin_trade_profiles', []);
+    setProfiles(storedProfiles);
   }, []);
   
   const triggerError = (message: string) => {
@@ -128,24 +136,22 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
         let teamId: string | undefined = undefined;
 
         if (inviteCode.trim()) {
-            try {
-                const invites: TeamInvite[] = JSON.parse(localStorage.getItem('yin_trade_invites') || '[]');
-                const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
-                const validInvite = invites.find(inv => inv.code === inviteCode.trim());
-                
-                if (!validInvite) {
-                    triggerError('Invalid invite code.');
-                    setIsLoading(false);
-                    return;
-                }
-                teamId = validInvite.teamId;
-                const teamIndex = teams.findIndex(t => t.id === teamId);
-                if (teamIndex !== -1) {
-                    teams[teamIndex].memberIds.push(newProfileId);
-                    localStorage.setItem('yin_trade_teams', JSON.stringify(teams));
-                }
-            } catch (e) {
-                triggerError('Error processing invite code.');
+            const invites: TeamInvite[] = safeJsonParse<TeamInvite[]>('yin_trade_invites', []);
+            const teams: Team[] = safeJsonParse<Team[]>('yin_trade_teams', []);
+            const validInvite = invites.find(inv => inv.code === inviteCode.trim());
+            
+            if (!validInvite) {
+                triggerError('Invalid invite code.');
+                setIsLoading(false);
+                return;
+            }
+            teamId = validInvite.teamId;
+            const teamIndex = teams.findIndex(t => t.id === teamId);
+            if (teamIndex !== -1) {
+                teams[teamIndex].memberIds.push(newProfileId);
+                localStorage.setItem('yin_trade_teams', JSON.stringify(teams));
+            } else {
+                triggerError('Team associated with invite code not found.');
                 setIsLoading(false);
                 return;
             }
@@ -329,5 +335,3 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({ onProfileSelected, them
     </>
   );
 };
-
-export default ProfileManager;

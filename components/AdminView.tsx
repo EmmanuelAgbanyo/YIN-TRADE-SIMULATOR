@@ -1,6 +1,9 @@
 
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+
+
+
+import React, { useState, useEffect, useMemo, useCallback, SVGProps } from 'react';
 import type { UserProfile, ProfileState, Stock, Team, AdminSettings, ToastMessage, Module } from '../types.ts';
 import Card from './ui/Card.tsx';
 import { 
@@ -26,6 +29,18 @@ interface ProfileSummaryData {
     portfolioValue: number;
     pnl: number;
 }
+
+// FIX: Added trailing comma to generic to avoid potential parsing issues.
+const safeJsonParse = <T,>(key: string, defaultValue: T): T => {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error parsing JSON from localStorage key "${key}":`, error);
+        localStorage.removeItem(key); // Clear corrupted data
+        return defaultValue;
+    }
+};
 
 // Sub-Components
 const Accordion: React.FC<{ title: string; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, children, defaultOpen = false }) => {
@@ -113,24 +128,25 @@ const ManageUserModal: React.FC<{
 
 
 // Icons
-const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+// FIX: Updated component to use explicit SVGProps import to fix type resolution error.
+const ChevronDownIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
     </svg>
 );
-const MegaphoneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const MegaphoneIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM10.5 9a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.89 6.663a.75.75 0 00-1.06-1.06l-1.06 1.06a.75.75 0 101.06 1.06l1.06-1.06zM21.75 12a9.75 9.75 0 10-19.5 0 9.75 9.75 0 0019.5 0z" /></svg>
 );
-const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const UsersIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-4.663M12 12.375a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" /></svg>
 );
-const ScaleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const ScaleIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.036.243c-2.132 0-4.14-.834-5.657-2.343-1.517-1.509-2.343-3.525-2.343-5.657s.826-4.148 2.343-5.657c1.517-1.509 3.526-2.343 5.657-2.343m-7.087 7.087c-1.134.628-2.094 1.434-2.896 2.387M5.25 4.97A48.416 48.416 0 0112 4.5c2.291 0 4.545.16 6.75.47m-13.5 0c-1.01.143-2.01.317-3 .52m3-.52l-2.62 10.726c-.122.499.106 1.028-.589 1.202a5.989 5.989 0 002.036.243c2.132 0 4.14-.834 5.657-2.343 1.517-1.509 2.343-3.525-2.343-5.657s-.826-4.148-2.343-5.657c-1.517-1.509-3.526-2.343-5.657-2.343m7.087 7.087c1.134.628 2.094 1.434 2.896 2.387" /></svg>
 );
-const ArrowTrendingUpIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const ArrowTrendingUpIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
 );
-const InfoIcon: React.FC<React.SVGProps<SVGSVGElement> & { title?: string }> = ({ title, ...props }) => (
+const InfoIcon: React.FC<SVGProps<SVGSVGElement> & { title?: string }> = ({ title, ...props }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         {title && <title>{title}</title>}
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
@@ -141,7 +157,8 @@ const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: string; 
     <Card><div className="flex items-center space-x-4"><div className="p-3 bg-base-300 rounded-lg">{icon}</div><div><div className="text-sm text-base-content/70">{label}</div><div className="text-2xl font-bold text-text-strong">{value}</div></div></div></Card>
 );
 
-const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
+// FIX: Changed to a named export to resolve module resolution errors.
+export const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
     const [allProfilesData, setAllProfilesData] = useState<ProfileSummaryData[]>([]);
     const [allTeams, setAllTeams] = useState<Team[]>([]);
     const [initialSettings, setInitialSettings] = useState<AdminSettings | null>(null);
@@ -160,46 +177,48 @@ const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
     const stockMap = useMemo(() => new Map(stocks.map(s => [s.symbol, s.price])), [stocks]);
 
     const loadData = useCallback(() => {
-        try {
-            const profiles: UserProfile[] = JSON.parse(localStorage.getItem('yin_trade_profiles') || '[]');
-            const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
-            const settingsJSON = localStorage.getItem('yin_trade_admin_settings');
-             
-            const settings: AdminSettings = settingsJSON ? {
-                startingCapital: DEFAULT_STARTING_CAPITAL, interestRate: DEFAULT_INTEREST_RATE, commissionFee: DEFAULT_COMMISSION_FEE, ...JSON.parse(settingsJSON)
-            } : {
-                startingCapital: DEFAULT_STARTING_CAPITAL, settlementCycle: 'T+2', baseDrift: DEFAULT_ANNUAL_DRIFT, baseVolatility: DEFAULT_ANNUAL_VOLATILITY, eventFrequency: DEFAULT_EVENT_CHANCE_PER_TICK,
-                marketDurationMinutes: DEFAULT_MARKET_DURATION_MINUTES, circuitBreakerEnabled: DEFAULT_CIRCUIT_BREAKER_ENABLED, circuitBreakerThreshold: DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
-                circuitBreakerHaltSeconds: DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS, simulationSpeed: DEFAULT_SIMULATION_SPEED, interestRate: DEFAULT_INTEREST_RATE, commissionFee: DEFAULT_COMMISSION_FEE,
-            };
-            setInitialSettings(settings); setFormSettings(settings); setAllTeams(teams);
+        const profiles = safeJsonParse<UserProfile[]>('yin_trade_profiles', []);
+        const teams = safeJsonParse<Team[]>('yin_trade_teams', []);
+        const savedSettings = safeJsonParse<Partial<AdminSettings>>('yin_trade_admin_settings', {});
+        
+        const settings: AdminSettings = {
+            startingCapital: savedSettings.startingCapital ?? DEFAULT_STARTING_CAPITAL,
+            settlementCycle: savedSettings.settlementCycle ?? 'T+2',
+            baseDrift: savedSettings.baseDrift ?? DEFAULT_ANNUAL_DRIFT,
+            baseVolatility: savedSettings.baseVolatility ?? DEFAULT_ANNUAL_VOLATILITY,
+            eventFrequency: savedSettings.eventFrequency ?? DEFAULT_EVENT_CHANCE_PER_TICK,
+            marketDurationMinutes: savedSettings.marketDurationMinutes ?? DEFAULT_MARKET_DURATION_MINUTES,
+            circuitBreakerEnabled: savedSettings.circuitBreakerEnabled ?? DEFAULT_CIRCUIT_BREAKER_ENABLED,
+            circuitBreakerThreshold: savedSettings.circuitBreakerThreshold ?? DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
+            circuitBreakerHaltSeconds: savedSettings.circuitBreakerHaltSeconds ?? DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS,
+            simulationSpeed: savedSettings.simulationSpeed ?? DEFAULT_SIMULATION_SPEED,
+            interestRate: savedSettings.interestRate ?? DEFAULT_INTEREST_RATE,
+            commissionFee: savedSettings.commissionFee ?? DEFAULT_COMMISSION_FEE,
+        };
+        setInitialSettings(settings); setFormSettings(settings); setAllTeams(teams);
 
-            const storedVideos = localStorage.getItem('yin_trade_academy_videos');
-            if (storedVideos) {
-                setVideoLinks(JSON.parse(storedVideos));
+        const storedVideos = safeJsonParse<Record<string, string>>('yin_trade_academy_videos', {});
+        setVideoLinks(storedVideos);
+
+        const profileData = profiles.filter(p => p.name !== 'Admin').map(profile => {
+            const leaderId = profile.isTeamLeader ? profile.id : teams.find(t => t.id === profile.teamId)?.leaderId;
+            const stateKeyId = leaderId || profile.id;
+            const state = safeJsonParse<ProfileState | null>(`yin_trade_profile_${stateKeyId}`, null);
+            
+            let holdingsValue = 0, totalCostBasis = 0;
+            if (state) {
+                Object.values(state.portfolio.holdings).forEach(h => {
+                    const price = stockMap.get(h.symbol) || 0;
+                    holdingsValue += h.quantity * price;
+                    totalCostBasis += h.quantity * h.avgCost;
+                });
             }
-
-            const profileData = profiles.filter(p => p.name !== 'Admin').map(profile => {
-                const leaderId = profile.isTeamLeader ? profile.id : teams.find(t => t.id === profile.teamId)?.leaderId;
-                const stateKeyId = leaderId || profile.id;
-                const stateJSON = localStorage.getItem(`yin_trade_profile_${stateKeyId}`);
-                const state: ProfileState | null = stateJSON ? JSON.parse(stateJSON) : null;
-                
-                let holdingsValue = 0, totalCostBasis = 0;
-                if (state) {
-                    Object.values(state.portfolio.holdings).forEach(h => {
-                        const price = stockMap.get(h.symbol) || 0;
-                        holdingsValue += h.quantity * price;
-                        totalCostBasis += h.quantity * h.avgCost;
-                    });
-                }
-                const totalUnsettledCash = state?.portfolio.unsettledCash.reduce((sum, item) => sum + item.amount, 0) ?? 0;
-                const portfolioValue = (state?.portfolio.cash ?? settings.startingCapital) + totalUnsettledCash + holdingsValue;
-                const pnl = portfolioValue - settings.startingCapital;
-                return { profile, state, portfolioValue, pnl };
-            });
-            setAllProfilesData(profileData);
-        } catch (e) { console.error("Failed to load admin data:", e); }
+            const totalUnsettledCash = state?.portfolio.unsettledCash.reduce((sum, item) => sum + item.amount, 0) ?? 0;
+            const portfolioValue = (state?.portfolio.cash ?? settings.startingCapital) + totalUnsettledCash + holdingsValue;
+            const pnl = portfolioValue - settings.startingCapital;
+            return { profile, state, portfolioValue, pnl };
+        });
+        setAllProfilesData(profileData);
     }, [stockMap]);
     
     useEffect(() => { loadData(); }, [loadData]);
@@ -253,9 +272,8 @@ const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
         const profileData = allProfilesData.find(p => p.profile.id === profileId);
         if (!profileData) return;
         const key = `yin_trade_profile_${profileData.profile.teamId ? allTeams.find(t=>t.id === profileData.profile.teamId)?.leaderId : profileId}`;
-        const stateJSON = localStorage.getItem(key);
-        if(stateJSON){
-            const state = JSON.parse(stateJSON);
+        const state = safeJsonParse<ProfileState | null>(key, null);
+        if(state){
             state.portfolio.cash += amount;
             localStorage.setItem(key, JSON.stringify(state));
             setToast({ type: 'success', text: `GHS ${amount.toFixed(2)} ${amount > 0 ? 'added to' : 'removed from'} ${profileData.profile.name}.` });
@@ -382,5 +400,3 @@ const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
         <ManageUserModal isOpen={isManageUserModalOpen} onClose={() => setIsManageUserModalOpen(false)} profileData={selectedUser} onResetProfile={handleResetProfile} onAdjustCash={handleAdjustCash} />
         </div>);
 };
-
-export default AdminView;

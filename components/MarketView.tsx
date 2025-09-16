@@ -14,9 +14,10 @@ import MarketNewsFeed from './MarketNewsFeed.tsx';
 import StockChartView from './StockChartView.tsx';
 import { useAIAnalyst } from '../hooks/useAIAnalyst.ts';
 import PortfolioAllocationChart from './PortfolioAllocationChart.tsx';
-import AdminView from './AdminView.tsx';
-import TeamView from './TeamView.tsx';
-import AcademyView from './AcademyView.tsx';
+// FIX: Changed to named imports to resolve module resolution errors.
+import { AdminView } from './AdminView.tsx';
+import { TeamView } from './TeamView.tsx';
+import { AcademyView } from './AcademyView.tsx';
 import MarketEventDisplay from './MarketEventDisplay.tsx';
 import TradeConfirmationModal from './TradeConfirmationModal.tsx';
 

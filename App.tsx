@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header.tsx';
 import MarketView from './components/MarketView.tsx';
@@ -8,7 +10,8 @@ import OnboardingModal from './components/OnboardingModal.tsx';
 import GuideModal from './components/GuideModal.tsx';
 import StockTicker from './components/StockTicker.tsx';
 import type { UserProfile, ToastMessage, Team, TeamInvite } from './types.ts';
-import ProfileManager from './components/ProfileManager.tsx';
+// FIX: Changed to a named import for ProfileManager
+import { ProfileManager } from './components/ProfileManager.tsx';
 import SetPasswordModal from './components/SetPasswordModal.tsx';
 import CreateTeamModal from './components/CreateTeamModal.tsx';
 import TeamInviteModal from './components/TeamInviteModal.tsx';
@@ -19,7 +22,20 @@ import ChatbotWidget from './components/ChatbotWidget.tsx';
 // A simple simulation of password hashing for this browser-only environment.
 const hashPassword = (password: string): string => btoa(password);
 
-const App: React.FC = () => {
+// FIX: Added trailing comma to generic type parameter to avoid potential parsing issues.
+const safeJsonParse = <T,>(key: string, defaultValue: T): T => {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error parsing JSON from localStorage key "${key}":`, error);
+        localStorage.removeItem(key); // Clear corrupted data
+        return defaultValue;
+    }
+};
+
+// FIX: Changed to a named export to resolve module resolution errors.
+export const App: React.FC = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [isInitialized, setIsInitialized] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -34,7 +50,7 @@ const App: React.FC = () => {
     try {
       const activeProfileId = localStorage.getItem('yin_trade_active_profile_id');
       if (activeProfileId) {
-          const profiles: UserProfile[] = JSON.parse(localStorage.getItem('yin_trade_profiles') || '[]');
+          const profiles: UserProfile[] = safeJsonParse<UserProfile[]>('yin_trade_profiles', []);
           return profiles.find(p => p.id === activeProfileId) || null;
       }
     } catch (e) {
@@ -127,7 +143,7 @@ const App: React.FC = () => {
     const updatedProfile: UserProfile = { ...activeProfile, password: hashedPassword };
 
     // Update master list of profiles
-    const profiles: UserProfile[] = JSON.parse(localStorage.getItem('yin_trade_profiles') || '[]');
+    const profiles: UserProfile[] = safeJsonParse<UserProfile[]>('yin_trade_profiles', []);
     const profileIndex = profiles.findIndex(p => p.id === activeProfile.id);
     if (profileIndex !== -1) {
         profiles[profileIndex] = updatedProfile;
@@ -142,8 +158,8 @@ const App: React.FC = () => {
   const handleCreateTeam = (teamName: string) => {
     if (!activeProfile || activeProfile.teamId) return;
 
-    const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
-    const invites: TeamInvite[] = JSON.parse(localStorage.getItem('yin_trade_invites') || '[]');
+    const teams: Team[] = safeJsonParse<Team[]>('yin_trade_teams', []);
+    const invites: TeamInvite[] = safeJsonParse<TeamInvite[]>('yin_trade_invites', []);
     
     const newTeamId = `team_${Date.now()}`;
     const newProfileId = activeProfile.id;
@@ -169,7 +185,7 @@ const App: React.FC = () => {
 
     // Update the leader's profile
     const updatedProfile: UserProfile = { ...activeProfile, teamId: newTeam.id, isTeamLeader: true };
-    const profiles: UserProfile[] = JSON.parse(localStorage.getItem('yin_trade_profiles') || '[]');
+    const profiles: UserProfile[] = safeJsonParse<UserProfile[]>('yin_trade_profiles', []);
     const profileIndex = profiles.findIndex(p => p.id === activeProfile.id);
     if (profileIndex !== -1) {
         profiles[profileIndex] = updatedProfile;
@@ -183,8 +199,8 @@ const App: React.FC = () => {
 
   const handleViewInviteCode = () => {
     if (!activeProfile?.isTeamLeader || !activeProfile.teamId) return;
-    const invites: TeamInvite[] = JSON.parse(localStorage.getItem('yin_trade_invites') || '[]');
-    const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
+    const invites: TeamInvite[] = safeJsonParse<TeamInvite[]>('yin_trade_invites', []);
+    const teams: Team[] = safeJsonParse<Team[]>('yin_trade_teams', []);
     const team = teams.find(t => t.id === activeProfile.teamId);
     const invite = invites.find(i => i.teamId === activeProfile.teamId);
 
@@ -270,5 +286,3 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-export default App;

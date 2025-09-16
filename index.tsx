@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
+// FIX: Changed to a named import for App
+import { App } from './App.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 
 const rootElement = document.getElementById('root');
