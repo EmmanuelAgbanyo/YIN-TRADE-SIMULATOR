@@ -1,7 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # YIN Trade Simulator
 
 **YIN Trade Simulator** is a dynamic, client-side stock trading game that allows you to experience the thrill of the market without any financial risk. Built with a modern tech stack, this simulator provides a feature-rich environment where you can create a profile, manage a virtual portfolio, and even team up with friends to compete for the top spot. The application runs entirely in your browser, making it easy to get started.
