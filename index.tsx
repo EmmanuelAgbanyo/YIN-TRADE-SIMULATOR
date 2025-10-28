@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 // FIX: Changed to a named import for App
 import { App } from './App.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
+import './src/index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
