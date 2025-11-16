@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { QuizQuestion } from '../types';
-import Button from './ui/Button';
+import Button from './ui/Button.tsx';
 
 interface QuizProps {
   quiz: QuizQuestion[];

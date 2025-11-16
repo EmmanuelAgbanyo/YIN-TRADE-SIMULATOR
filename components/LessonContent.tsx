@@ -1,5 +1,5 @@
 import React from 'react';
-import YouTubeEmbed from './YouTubeEmbed';
+import YouTubeEmbed from './YouTubeEmbed.tsx';
 
 interface LessonContentProps {
   title: string;

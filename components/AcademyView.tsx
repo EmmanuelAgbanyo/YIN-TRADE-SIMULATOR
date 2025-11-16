@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import type { UserProfile, AcademyProgress, Lesson, Module } from '../types';
-import Card from './ui/Card';
-import { ACADEMY_MODULES } from '../academy-content';
-import Quiz from './Quiz';
-import YouTubeEmbed from './YouTubeEmbed';
-import Button from './ui/Button';
+import Card from './ui/Card.tsx';
+import { ACADEMY_MODULES } from '../academy-content.ts';
+import Quiz from './Quiz.tsx';
+import YouTubeEmbed from './YouTubeEmbed.tsx';
+import Button from './ui/Button.tsx';
 
 interface AcademyViewProps {
   profile: UserProfile;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { UserProfile, Team, TeamInvite, OrderHistoryItem } from '../types';
-import Card from './ui/Card';
-import Button from './ui/Button';
+import Card from './ui/Card.tsx';
+import Button from './ui/Button.tsx';
 
 interface TeamViewProps {
     profile: UserProfile;

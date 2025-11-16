@@ -18,19 +18,31 @@ const MoonIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ theme, toggleTheme }) => {
+    const isDark = theme === 'dark';
+    
     return (
         <button
             onClick={toggleTheme}
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-base-300/70 hover:bg-base-300 text-base-content hover:text-text-strong transition-all"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-base-300/70 hover:bg-base-300 text-base-content hover:text-text-strong transition-all relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100"
+            aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
         >
-            {theme === 'dark' ? (
-                <SunIcon className="w-6 h-6" />
-            ) : (
-                <MoonIcon className="w-6 h-6" />
-            )}
+            <span className="sr-only">Switch theme</span>
+            
+            {/* Sun Icon - Visible in Light mode */}
+            <SunIcon className={`
+                w-6 h-6 text-warning
+                absolute transition-all duration-300 ease-in-out
+                ${isDark ? 'transform -rotate-90 scale-0 opacity-0' : 'transform rotate-0 scale-100 opacity-100'}
+            `} />
+            
+            {/* Moon Icon - Visible in Dark mode */}
+            <MoonIcon className={`
+                w-6 h-6 text-info
+                absolute transition-all duration-300 ease-in-out
+                ${isDark ? 'transform rotate-0 scale-100 opacity-100' : 'transform rotate-90 scale-0 opacity-0'}
+            `} />
         </button>
-    )
-}
+    );
+};
 
 export default ThemeSwitcher;
