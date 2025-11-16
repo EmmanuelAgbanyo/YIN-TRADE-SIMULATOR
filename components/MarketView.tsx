@@ -1,8 +1,7 @@
 
-
-
 import React, { useState, useMemo } from 'react';
-import type { Stock, Portfolio, OrderHistoryItem, TradeOrder, NewsHeadline, ActiveOrder, UserProfile, ToastMessage, MarketEvent, MarketStatus } from '../types.ts';
+// FIX: Import PerformanceHistoryEntry type to use in component props.
+import type { Stock, Portfolio, OrderHistoryItem, TradeOrder, NewsHeadline, ActiveOrder, UserProfile, ToastMessage, MarketEvent, MarketStatus, Holding, AdminSettings, PerformanceHistoryEntry } from '../types.ts';
 import { TradeType } from '../types.ts';
 import PortfolioSummary from './PortfolioSummary.tsx';
 import HoldingsView from './HoldingsView.tsx';
@@ -14,10 +13,10 @@ import MarketNewsFeed from './MarketNewsFeed.tsx';
 import StockChartView from './StockChartView.tsx';
 import { useAIAnalyst } from '../hooks/useAIAnalyst.ts';
 import PortfolioAllocationChart from './PortfolioAllocationChart.tsx';
-// FIX: Changed to named imports to resolve module resolution errors.
-import { AdminView } from './AdminView.tsx';
-import { TeamView } from './TeamView.tsx';
-import { AcademyView } from './AcademyView.tsx';
+import PerformanceChart from './PerformanceChart.tsx';
+import AdminView from './AdminView.tsx';
+import TeamView from './TeamView.tsx';
+import AcademyView from './AcademyView.tsx';
 import MarketEventDisplay from './MarketEventDisplay.tsx';
 import TradeConfirmationModal from './TradeConfirmationModal.tsx';
 
@@ -27,6 +26,8 @@ interface MarketViewProps {
   portfolio: Portfolio;
   activeOrders: ActiveOrder[];
   orderHistory: OrderHistoryItem[];
+  // FIX: Added performanceHistory to the component's props interface.
+  performanceHistory: PerformanceHistoryEntry[];
   placeOrder: (order: TradeOrder) => boolean;
   cancelOrder: (orderId: string) => void;
   news: NewsHeadline[];
@@ -36,6 +37,9 @@ interface MarketViewProps {
   activeMarketEvent: MarketEvent | null;
   isAdmin: boolean;
   setToast: (toast: ToastMessage | null) => void;
+  adminSettings: AdminSettings;
+  openMarketAdmin: () => void;
+  closeMarketAdmin: () => void;
 }
 
 type Tab = 'Dashboard' | 'Trade' | 'Academy' | 'Orders' | 'History' | 'Team' | 'Admin';
@@ -76,7 +80,8 @@ const TabNav: React.FC<{ activeTab: Tab; setActiveTab: (tab: Tab) => void; isAdm
 }
 
 const MarketView: React.FC<MarketViewProps> = (props) => {
-  const { stocks, profile, portfolio, activeOrders, orderHistory, placeOrder, cancelOrder, news, isNewsLoading, fetchNews, marketStatus, activeMarketEvent, isAdmin, setToast } = props;
+  // FIX: Destructured the new 'performanceHistory' prop.
+  const { stocks, profile, portfolio, activeOrders, orderHistory, placeOrder, cancelOrder, news, isNewsLoading, fetchNews, marketStatus, activeMarketEvent, isAdmin, setToast, adminSettings, performanceHistory, openMarketAdmin, closeMarketAdmin } = props;
   const [activeTab, setActiveTab] = useState<Tab>('Dashboard');
   const [selectedStockForTrade, setSelectedStockForTrade] = useState<Stock | null>(null);
   const [tradeType, setTradeType] = useState<TradeType>(TradeType.BUY);
@@ -87,7 +92,8 @@ const MarketView: React.FC<MarketViewProps> = (props) => {
   const { holdingsValue, totalPnL, totalUnsettledCash } = useMemo(() => {
     let holdingsValue = 0;
     let totalCostBasis = 0;
-    Object.values(portfolio.holdings).forEach(holding => {
+// FIX: Explicitly type the 'holding' parameter to resolve 'unknown' type error.
+    Object.values(portfolio.holdings).forEach((holding: Holding) => {
       const stock = stocks.find(s => s.symbol === holding.symbol);
       holdingsValue += (stock ? stock.price * holding.quantity : 0);
       totalCostBasis += holding.avgCost * holding.quantity;
@@ -136,8 +142,17 @@ const MarketView: React.FC<MarketViewProps> = (props) => {
       case 'Dashboard':
         return (
           <div id="dashboard-view" className="space-y-6">
-            <div className="animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-                <PortfolioAllocationChart holdings={portfolio.holdings} stocks={stocks} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+               <div className="animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                  <PortfolioAllocationChart holdings={portfolio.holdings} stocks={stocks} />
+              </div>
+               <div className="animate-fade-in-up" style={{ animationDelay: '450ms' }}>
+                  <PerformanceChart 
+                      // FIX: Pass the 'performanceHistory' prop instead of incorrectly accessing it from 'portfolio'.
+                      history={performanceHistory || []} 
+                      startingCapital={adminSettings.startingCapital} 
+                  />
+              </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 space-y-6 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
@@ -191,7 +206,7 @@ const MarketView: React.FC<MarketViewProps> = (props) => {
        case 'Team':
             return <TeamView profile={profile} orderHistory={orderHistory} />;
        case 'Admin':
-            return isAdmin ? <AdminView stocks={stocks} setToast={setToast}/> : null;
+            return isAdmin ? <AdminView stocks={stocks} setToast={setToast} marketStatus={marketStatus} openMarketAdmin={openMarketAdmin} closeMarketAdmin={closeMarketAdmin} /> : null;
       default:
         return null;
     }

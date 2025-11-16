@@ -1,10 +1,7 @@
 
 
-
-
-
-import React, { useState, useEffect, useMemo, useCallback, SVGProps } from 'react';
-import type { UserProfile, ProfileState, Stock, Team, AdminSettings, ToastMessage, Module } from '../types.ts';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import type { UserProfile, ProfileState, Stock, Team, AdminSettings, ToastMessage, Module, MarketStatus } from '../types.ts';
 import Card from './ui/Card.tsx';
 import { 
     DEFAULT_STARTING_CAPITAL, DEFAULT_ANNUAL_DRIFT, DEFAULT_ANNUAL_VOLATILITY, 
@@ -21,6 +18,9 @@ import ConfirmationModal from './ConfirmationModal.tsx';
 interface AdminViewProps {
     stocks: Stock[];
     setToast: (toast: ToastMessage | null) => void;
+    marketStatus: MarketStatus;
+    openMarketAdmin: () => void;
+    closeMarketAdmin: () => void;
 }
 
 interface ProfileSummaryData {
@@ -29,18 +29,6 @@ interface ProfileSummaryData {
     portfolioValue: number;
     pnl: number;
 }
-
-// FIX: Added trailing comma to generic to avoid potential parsing issues.
-const safeJsonParse = <T,>(key: string, defaultValue: T): T => {
-    try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-        console.warn(`Error parsing JSON from localStorage key "${key}":`, error);
-        localStorage.removeItem(key); // Clear corrupted data
-        return defaultValue;
-    }
-};
 
 // Sub-Components
 const Accordion: React.FC<{ title: string; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, children, defaultOpen = false }) => {
@@ -128,43 +116,73 @@ const ManageUserModal: React.FC<{
 
 
 // Icons
-// FIX: Updated component to use explicit SVGProps import to fix type resolution error.
-const ChevronDownIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
+const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
     </svg>
 );
-const MegaphoneIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
+const MegaphoneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM10.5 9a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.89 6.663a.75.75 0 00-1.06-1.06l-1.06 1.06a.75.75 0 101.06 1.06l1.06-1.06zM21.75 12a9.75 9.75 0 10-19.5 0 9.75 9.75 0 0019.5 0z" /></svg>
 );
-const UsersIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
+const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-4.663M12 12.375a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" /></svg>
 );
-const ScaleIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
+const ScaleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.036.243c-2.132 0-4.14-.834-5.657-2.343-1.517-1.509-2.343-3.525-2.343-5.657s.826-4.148 2.343-5.657c1.517-1.509 3.526-2.343 5.657-2.343m-7.087 7.087c-1.134.628-2.094 1.434-2.896 2.387M5.25 4.97A48.416 48.416 0 0112 4.5c2.291 0 4.545.16 6.75.47m-13.5 0c-1.01.143-2.01.317-3 .52m3-.52l-2.62 10.726c-.122.499.106 1.028-.589 1.202a5.989 5.989 0 002.036.243c2.132 0 4.14-.834 5.657-2.343 1.517-1.509 2.343-3.525-2.343-5.657s-.826-4.148-2.343-5.657c-1.517-1.509-3.526-2.343-5.657-2.343m7.087 7.087c1.134.628 2.094 1.434 2.896 2.387" /></svg>
 );
-const ArrowTrendingUpIcon: React.FC<SVGProps<SVGSVGElement>> = (props) => (
+const ArrowTrendingUpIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
 );
-const InfoIcon: React.FC<SVGProps<SVGSVGElement> & { title?: string }> = ({ title, ...props }) => (
+const InfoIcon: React.FC<React.SVGProps<SVGSVGElement> & { title?: string }> = ({ title, ...props }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         {title && <title>{title}</title>}
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
     </svg>
 );
+const PlayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
+        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+    </svg>
+);
+const StopIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
+        <path d="M5.25 3A2.25 2.25 0 003 5.25v9.5A2.25 2.25 0 005.25 17h9.5A2.25 2.25 0 0017 14.75v-9.5A2.25 2.25 0 0014.75 3h-9.5z" />
+    </svg>
+);
+
+const BigMarketClock: React.FC<{ status: MarketStatus }> = ({ status }) => {
+    const statusConfig = {
+        OPEN: { text: 'OPEN', color: 'text-success', pulse: true },
+        CLOSED: { text: 'CLOSED', color: 'text-error', pulse: false },
+        PRE_MARKET: { text: 'PRE-MARKET', color: 'text-info', pulse: true },
+        HALTED: { text: 'HALTED', color: 'text-warning', pulse: true },
+    };
+    const config = statusConfig[status];
+
+    return (
+        <div className="flex flex-col items-center justify-center space-y-2">
+            <div className={`relative flex h-4 w-4`}>
+                {config.pulse && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${config.color.replace('text-', 'bg-')}`}></span>}
+                <span className={`relative inline-flex rounded-full h-4 w-4 ${config.color.replace('text-', 'bg-')}`}></span>
+            </div>
+            <span className={`font-bold text-2xl tracking-wider ${config.color}`}>{config.text}</span>
+        </div>
+    );
+};
+
 
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: string; }> = ({ icon, label, value }) => (
     <Card><div className="flex items-center space-x-4"><div className="p-3 bg-base-300 rounded-lg">{icon}</div><div><div className="text-sm text-base-content/70">{label}</div><div className="text-2xl font-bold text-text-strong">{value}</div></div></div></Card>
 );
 
-// FIX: Changed to a named export to resolve module resolution errors.
-export const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
+const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast, marketStatus, openMarketAdmin, closeMarketAdmin }) => {
     const [allProfilesData, setAllProfilesData] = useState<ProfileSummaryData[]>([]);
     const [allTeams, setAllTeams] = useState<Team[]>([]);
     const [initialSettings, setInitialSettings] = useState<AdminSettings | null>(null);
     const [formSettings, setFormSettings] = useState<AdminSettings | null>(null);
     const [isDirty, setIsDirty] = useState(false);
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+    const [isCloseMarketConfirmOpen, setIsCloseMarketConfirmOpen] = useState(false);
     const [resetConfirmationText, setResetConfirmationText] = useState('');
     const [activeTab, setActiveTab] = useState<'Dashboard' |'Traders' | 'Teams' | 'Settings' | 'Academy'>('Dashboard');
     const [broadcastMessage, setBroadcastMessage] = useState('');
@@ -177,48 +195,46 @@ export const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
     const stockMap = useMemo(() => new Map(stocks.map(s => [s.symbol, s.price])), [stocks]);
 
     const loadData = useCallback(() => {
-        const profiles = safeJsonParse<UserProfile[]>('yin_trade_profiles', []);
-        const teams = safeJsonParse<Team[]>('yin_trade_teams', []);
-        const savedSettings = safeJsonParse<Partial<AdminSettings>>('yin_trade_admin_settings', {});
-        
-        const settings: AdminSettings = {
-            startingCapital: savedSettings.startingCapital ?? DEFAULT_STARTING_CAPITAL,
-            settlementCycle: savedSettings.settlementCycle ?? 'T+2',
-            baseDrift: savedSettings.baseDrift ?? DEFAULT_ANNUAL_DRIFT,
-            baseVolatility: savedSettings.baseVolatility ?? DEFAULT_ANNUAL_VOLATILITY,
-            eventFrequency: savedSettings.eventFrequency ?? DEFAULT_EVENT_CHANCE_PER_TICK,
-            marketDurationMinutes: savedSettings.marketDurationMinutes ?? DEFAULT_MARKET_DURATION_MINUTES,
-            circuitBreakerEnabled: savedSettings.circuitBreakerEnabled ?? DEFAULT_CIRCUIT_BREAKER_ENABLED,
-            circuitBreakerThreshold: savedSettings.circuitBreakerThreshold ?? DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
-            circuitBreakerHaltSeconds: savedSettings.circuitBreakerHaltSeconds ?? DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS,
-            simulationSpeed: savedSettings.simulationSpeed ?? DEFAULT_SIMULATION_SPEED,
-            interestRate: savedSettings.interestRate ?? DEFAULT_INTEREST_RATE,
-            commissionFee: savedSettings.commissionFee ?? DEFAULT_COMMISSION_FEE,
-        };
-        setInitialSettings(settings); setFormSettings(settings); setAllTeams(teams);
+        try {
+            const profiles: UserProfile[] = JSON.parse(localStorage.getItem('yin_trade_profiles') || '[]');
+            const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
+            const settingsJSON = localStorage.getItem('yin_trade_admin_settings');
+             
+            const settings: AdminSettings = settingsJSON ? {
+                startingCapital: DEFAULT_STARTING_CAPITAL, interestRate: DEFAULT_INTEREST_RATE, commissionFee: DEFAULT_COMMISSION_FEE, ...JSON.parse(settingsJSON)
+            } : {
+                startingCapital: DEFAULT_STARTING_CAPITAL, settlementCycle: 'T+2', baseDrift: DEFAULT_ANNUAL_DRIFT, baseVolatility: DEFAULT_ANNUAL_VOLATILITY, eventFrequency: DEFAULT_EVENT_CHANCE_PER_TICK,
+                marketDurationMinutes: DEFAULT_MARKET_DURATION_MINUTES, circuitBreakerEnabled: DEFAULT_CIRCUIT_BREAKER_ENABLED, circuitBreakerThreshold: DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
+                circuitBreakerHaltSeconds: DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS, simulationSpeed: DEFAULT_SIMULATION_SPEED, interestRate: DEFAULT_INTEREST_RATE, commissionFee: DEFAULT_COMMISSION_FEE,
+            };
+            setInitialSettings(settings); setFormSettings(settings); setAllTeams(teams);
 
-        const storedVideos = safeJsonParse<Record<string, string>>('yin_trade_academy_videos', {});
-        setVideoLinks(storedVideos);
-
-        const profileData = profiles.filter(p => p.name !== 'Admin').map(profile => {
-            const leaderId = profile.isTeamLeader ? profile.id : teams.find(t => t.id === profile.teamId)?.leaderId;
-            const stateKeyId = leaderId || profile.id;
-            const state = safeJsonParse<ProfileState | null>(`yin_trade_profile_${stateKeyId}`, null);
-            
-            let holdingsValue = 0, totalCostBasis = 0;
-            if (state) {
-                Object.values(state.portfolio.holdings).forEach(h => {
-                    const price = stockMap.get(h.symbol) || 0;
-                    holdingsValue += h.quantity * price;
-                    totalCostBasis += h.quantity * h.avgCost;
-                });
+            const storedVideos = localStorage.getItem('yin_trade_academy_videos');
+            if (storedVideos) {
+                setVideoLinks(JSON.parse(storedVideos));
             }
-            const totalUnsettledCash = state?.portfolio.unsettledCash.reduce((sum, item) => sum + item.amount, 0) ?? 0;
-            const portfolioValue = (state?.portfolio.cash ?? settings.startingCapital) + totalUnsettledCash + holdingsValue;
-            const pnl = portfolioValue - settings.startingCapital;
-            return { profile, state, portfolioValue, pnl };
-        });
-        setAllProfilesData(profileData);
+
+            const profileData = profiles.filter(p => p.name !== 'Admin').map(profile => {
+                const leaderId = profile.isTeamLeader ? profile.id : teams.find(t => t.id === profile.teamId)?.leaderId;
+                const stateKeyId = leaderId || profile.id;
+                const stateJSON = localStorage.getItem(`yin_trade_profile_${stateKeyId}`);
+                const state: ProfileState | null = stateJSON ? JSON.parse(stateJSON) : null;
+                
+                let holdingsValue = 0, totalCostBasis = 0;
+                if (state) {
+                    Object.values(state.portfolio.holdings).forEach(h => {
+                        const price = stockMap.get(h.symbol) || 0;
+                        holdingsValue += h.quantity * price;
+                        totalCostBasis += h.quantity * h.avgCost;
+                    });
+                }
+                const totalUnsettledCash = state?.portfolio.unsettledCash.reduce((sum, item) => sum + item.amount, 0) ?? 0;
+                const portfolioValue = (state?.portfolio.cash ?? settings.startingCapital) + totalUnsettledCash + holdingsValue;
+                const pnl = portfolioValue - settings.startingCapital;
+                return { profile, state, portfolioValue, pnl };
+            });
+            setAllProfilesData(profileData);
+        } catch (e) { console.error("Failed to load admin data:", e); }
     }, [stockMap]);
     
     useEffect(() => { loadData(); }, [loadData]);
@@ -272,8 +288,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
         const profileData = allProfilesData.find(p => p.profile.id === profileId);
         if (!profileData) return;
         const key = `yin_trade_profile_${profileData.profile.teamId ? allTeams.find(t=>t.id === profileData.profile.teamId)?.leaderId : profileId}`;
-        const state = safeJsonParse<ProfileState | null>(key, null);
-        if(state){
+        const stateJSON = localStorage.getItem(key);
+        if(stateJSON){
+            const state = JSON.parse(stateJSON);
             state.portfolio.cash += amount;
             localStorage.setItem(key, JSON.stringify(state));
             setToast({ type: 'success', text: `GHS ${amount.toFixed(2)} ${amount > 0 ? 'added to' : 'removed from'} ${profileData.profile.name}.` });
@@ -288,38 +305,77 @@ export const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
     const sortedProfiles = [...allProfilesData].sort((a, b) => b.portfolioValue - a.portfolioValue);
     
     const renderDashboard = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-            <StatCard icon={<UsersIcon className="w-6 h-6 text-primary" />} label="Total Traders" value={totalUsers.toLocaleString()} />
-            <StatCard icon={<ScaleIcon className="w-6 h-6 text-secondary" />} label="Total AUM" value={formatter.format(totalAUM)} />
-            <StatCard icon={<ArrowTrendingUpIcon className="w-6 h-6 text-success" />} label="Total Trades" value={totalTrades.toLocaleString()} />
-            <Card className="lg:col-span-3">
-                <h3 className="text-xl font-bold text-text-strong mb-4">Market Controls</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium mb-1 text-base-content/80">Broadcast Message</label>
-                        <div className="flex items-center space-x-2">
-                             <input type="text" placeholder="Announce a competition..." value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} className="input input-bordered w-full bg-base-100" />
-                             <Button onClick={handleBroadcast} disabled={!broadcastMessage}>Send</Button>
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                <StatCard icon={<UsersIcon className="w-6 h-6 text-primary" />} label="Total Traders" value={totalUsers.toLocaleString()} />
+                <StatCard icon={<ScaleIcon className="w-6 h-6 text-secondary" />} label="Total AUM" value={formatter.format(totalAUM)} />
+                <StatCard icon={<ArrowTrendingUpIcon className="w-6 h-6 text-success" />} label="Total Trades" value={totalTrades.toLocaleString()} />
+            </div>
+             <Card className="lg:col-span-3">
+                 <h3 className="text-xl font-bold text-text-strong mb-4">Market Controls</h3>
+                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center p-4 bg-base-100 rounded-lg">
+                    <div className="lg:col-span-2 space-y-4">
+                         <div>
+                            <label className="block text-sm font-medium mb-1 text-base-content/80">Broadcast Message</label>
+                            <div className="flex items-center space-x-2">
+                                 <input type="text" placeholder="Announce a competition..." value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} className="input input-bordered w-full bg-base-200" />
+                                 <Button onClick={handleBroadcast} disabled={!broadcastMessage}>Send</Button>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1 text-base-content/80">Trigger Market Event</label>
+                            <div className="flex items-center space-x-2">
+                                 <select value={manualEvent} onChange={e => setManualEvent(e.target.value)} className="select select-bordered w-full bg-base-200">
+                                    <option value="" disabled>Select an event...</option>
+                                    {MARKET_EVENTS_TEMPLATES.map(e => <option key={e.title} value={e.title}>{e.title}</option>)}
+                                 </select>
+                                 <Button onClick={handleTriggerEvent} disabled={!manualEvent}>Trigger</Button>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1 text-base-content/80">Trigger Market Event</label>
-                        <div className="flex items-center space-x-2">
-                             <select value={manualEvent} onChange={e => setManualEvent(e.target.value)} className="select select-bordered w-full bg-base-100">
-                                <option value="" disabled>Select an event...</option>
-                                {MARKET_EVENTS_TEMPLATES.map(e => <option key={e.title} value={e.title}>{e.title}</option>)}
-                             </select>
-                             <Button onClick={handleTriggerEvent} disabled={!manualEvent}>Trigger</Button>
+
+                    <div className="lg:col-span-1 flex flex-col items-center justify-center h-full p-4 bg-base-200 rounded-lg border border-base-300">
+                        <p className="text-sm font-semibold text-base-content mb-2">Session Control</p>
+                        <BigMarketClock status={marketStatus} />
+                        <div className="mt-4 w-full">
+                            {(() => {
+                                switch (marketStatus) {
+                                    case 'OPEN':
+                                        return (
+                                            <Button onClick={() => setIsCloseMarketConfirmOpen(true)} variant="error" className="w-full !py-3 !text-base flex items-center justify-center">
+                                                <StopIcon className="w-5 h-5 mr-2" />
+                                                Close Market
+                                            </Button>
+                                        );
+                                    case 'PRE_MARKET':
+                                    case 'CLOSED':
+                                        return (
+                                            <Button onClick={openMarketAdmin} variant="success" className="w-full !py-3 !text-base flex items-center justify-center animate-pulse">
+                                                <PlayIcon className="w-5 h-5 mr-2" />
+                                                Open Market
+                                            </Button>
+                                        );
+                                    case 'HALTED':
+                                        return (
+                                            <Button variant="ghost" className="w-full !py-3 !text-base" disabled>
+                                                Market Halted
+                                            </Button>
+                                        );
+                                    default:
+                                        return null;
+                                }
+                            })()}
                         </div>
                     </div>
-                </div>
+                 </div>
             </Card>
         </div>
     );
     
     const renderTradersView = () => (
         <Card className="!p-0"><h3 className="text-xl font-bold text-text-strong p-4">Trader Leaderboard</h3><div className="overflow-x-auto"><table className="table w-full"><thead><tr className="border-b border-t border-base-300"><th className="text-left bg-transparent text-base-content font-semibold p-4">Rank</th><th className="text-left bg-transparent text-base-content font-semibold p-4">Trader Name</th><th className="text-right bg-transparent text-base-content font-semibold p-4">Portfolio Value</th><th className="text-right bg-transparent text-base-content font-semibold p-4">Total P/L</th><th className="text-center bg-transparent text-base-content font-semibold p-4">Actions</th></tr></thead><tbody>
-        {sortedProfiles.map((data, index) => (<tr key={data.profile.id} className={`border-b border-base-300/50 last:border-b-0 ${index % 2 === 0 ? 'bg-base-200/30' : ''}`}><td className="p-4 font-bold text-text-strong text-lg">#{index + 1}</td><td className="p-4 font-semibold text-text-strong">{data.profile.name} {data.profile.teamId && `(${allTeams.find(t=>t.id===data.profile.teamId)?.name})`}</td><td className="p-4 text-right font-mono text-primary">{formatter.format(data.portfolioValue)}</td><td className={`p-4 text-right font-mono ${data.pnl >= 0 ? 'text-success' : 'text-error'}`}>{formatter.format(data.pnl)}</td><td className="p-4 text-center"><Button size="sm" variant="ghost" onClick={() => handleManageUser(data)}>Manage</Button></td></tr>))}
+{/* FIX: Explicitly type the 'data' parameter to resolve 'unknown' type error. */}
+        {sortedProfiles.map((data: ProfileSummaryData, index) => (<tr key={data.profile.id} className={`border-b border-base-300/50 last:border-b-0 ${index % 2 === 0 ? 'bg-base-200/30' : ''}`}><td className="p-4 font-bold text-text-strong text-lg">#{index + 1}</td><td className="p-4 font-semibold text-text-strong">{data.profile.name} {data.profile.teamId && `(${allTeams.find(t=>t.id===data.profile.teamId)?.name})`}</td><td className="p-4 text-right font-mono text-primary">{formatter.format(data.portfolioValue)}</td><td className={`p-4 text-right font-mono ${data.pnl >= 0 ? 'text-success' : 'text-error'}`}>{formatter.format(data.pnl)}</td><td className="p-4 text-center"><Button size="sm" variant="ghost" onClick={() => handleManageUser(data)}>Manage</Button></td></tr>))}
         </tbody></table></div></Card>
     );
 
@@ -398,5 +454,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ stocks, setToast }) => {
         {tabs.map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`py-2 px-4 font-semibold text-sm transition-colors duration-200 border-b-2 shrink-0 ${activeTab === tab ? 'text-primary border-primary' : 'text-base-content/70 border-transparent hover:text-text-strong'}`}>{tab}</button>))}
         </div><div key={activeTab} className="animate-fade-in">{renderContent()}</div>
         <ManageUserModal isOpen={isManageUserModalOpen} onClose={() => setIsManageUserModalOpen(false)} profileData={selectedUser} onResetProfile={handleResetProfile} onAdjustCash={handleAdjustCash} />
+        <ConfirmationModal
+                isOpen={isCloseMarketConfirmOpen}
+                onClose={() => setIsCloseMarketConfirmOpen(false)}
+                onConfirm={() => {
+                    closeMarketAdmin();
+                    setIsCloseMarketConfirmOpen(false);
+                }}
+                title="Confirm Market Closure"
+                confirmText="Yes, Close Market"
+                confirmVariant="error"
+             >
+                <p>Are you sure you want to close the market? This will end the current trading session for all users and expire any pending orders.</p>
+             </ConfirmationModal>
         </div>);
 };
+
+export default AdminView;

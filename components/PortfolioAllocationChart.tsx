@@ -1,6 +1,7 @@
 
 
 
+
 import React from 'react';
 import type { Holding, Stock } from '../types.ts';
 import Card from './ui/Card.tsx';
@@ -64,7 +65,8 @@ const createDonutSlicePath = (cx: number, cy: number, innerRadius: number, outer
 const PortfolioAllocationChart: React.FC<PortfolioAllocationChartProps> = ({ holdings, stocks }) => {
   const holdingList = Object.values(holdings);
 
-  const portfolioData = holdingList.map(holding => {
+// FIX: Explicitly type the 'holding' parameter to resolve 'unknown' type error.
+  const portfolioData = holdingList.map((holding: Holding) => {
     const stock = stocks.find(s => s.symbol === holding.symbol);
     if (!stock) return null;
     return {

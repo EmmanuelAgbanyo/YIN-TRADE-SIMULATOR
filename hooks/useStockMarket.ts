@@ -1,10 +1,7 @@
 
-
-
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-import type { Stock, ProfileState, ToastMessage, NewsHeadline, MarketSentiment, TradeOrder, ActiveOrder, OrderHistoryItem, OHLC, UserProfile, Team, AdminSettings, UnsettledCashItem, MarketEvent, MarketStatus } from '../types.ts';
+import type { Stock, ProfileState, ToastMessage, NewsHeadline, MarketSentiment, TradeOrder, ActiveOrder, OrderHistoryItem, OHLC, UserProfile, Team, AdminSettings, UnsettledCashItem, MarketEvent, MarketStatus, PerformanceHistoryEntry } from '../types.ts';
 import { TradeType, OrderType, OrderStatus } from '../types.ts';
 import { 
     DEFAULT_STARTING_CAPITAL, STOCKS_DATA, MARKET_OPEN_DELAY_MS, 
@@ -17,17 +14,6 @@ import {
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 const getProfileStateKey = (profileId: string) => `yin_trade_profile_${profileId}`;
-
-const safeJsonParse = <T>(key: string, defaultValue: T): T => {
-    try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-        console.warn(`Error parsing JSON from localStorage key "${key}":`, error);
-        localStorage.removeItem(key); // Clear corrupted data
-        return defaultValue;
-    }
-};
 
 export const MARKET_EVENTS_TEMPLATES: Omit<MarketEvent, 'duration' | 'expiresAt'>[] = [
     { title: 'BREAKING: Positive Economic Report', description: 'Stronger than expected GDP growth boosts investor confidence.', driftModifier: 0.15, volatilityModifier: 0.05 },
@@ -52,20 +38,32 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
   const [circuitBreakerTriggered, setCircuitBreakerTriggered] = useState(false);
 
   const adminSettings: AdminSettings = useMemo(() => {
-    const savedSettings = safeJsonParse<Partial<AdminSettings>>('yin_trade_admin_settings', {});
+    try {
+        const settingsJSON = localStorage.getItem('yin_trade_admin_settings');
+        if (settingsJSON) {
+          const parsed = JSON.parse(settingsJSON);
+          // Add defaults for new settings if they don't exist
+          return {
+            startingCapital: DEFAULT_STARTING_CAPITAL,
+            interestRate: DEFAULT_INTEREST_RATE,
+            commissionFee: DEFAULT_COMMISSION_FEE,
+            ...parsed,
+          };
+        }
+    } catch (e) { console.error("Could not parse admin settings", e); }
     return {
-        startingCapital: savedSettings.startingCapital ?? DEFAULT_STARTING_CAPITAL,
-        settlementCycle: savedSettings.settlementCycle ?? 'T+2',
-        baseDrift: savedSettings.baseDrift ?? DEFAULT_ANNUAL_DRIFT,
-        baseVolatility: savedSettings.baseVolatility ?? DEFAULT_ANNUAL_VOLATILITY,
-        eventFrequency: savedSettings.eventFrequency ?? DEFAULT_EVENT_CHANCE_PER_TICK,
-        marketDurationMinutes: savedSettings.marketDurationMinutes ?? DEFAULT_MARKET_DURATION_MINUTES,
-        circuitBreakerEnabled: savedSettings.circuitBreakerEnabled ?? DEFAULT_CIRCUIT_BREAKER_ENABLED,
-        circuitBreakerThreshold: savedSettings.circuitBreakerThreshold ?? DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
-        circuitBreakerHaltSeconds: savedSettings.circuitBreakerHaltSeconds ?? DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS,
-        simulationSpeed: savedSettings.simulationSpeed ?? DEFAULT_SIMULATION_SPEED,
-        interestRate: savedSettings.interestRate ?? DEFAULT_INTEREST_RATE,
-        commissionFee: savedSettings.commissionFee ?? DEFAULT_COMMISSION_FEE,
+        startingCapital: DEFAULT_STARTING_CAPITAL,
+        settlementCycle: 'T+2',
+        baseDrift: DEFAULT_ANNUAL_DRIFT,
+        baseVolatility: DEFAULT_ANNUAL_VOLATILITY,
+        eventFrequency: DEFAULT_EVENT_CHANCE_PER_TICK,
+        marketDurationMinutes: DEFAULT_MARKET_DURATION_MINUTES,
+        circuitBreakerEnabled: DEFAULT_CIRCUIT_BREAKER_ENABLED,
+        circuitBreakerThreshold: DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
+        circuitBreakerHaltSeconds: DEFAULT_CIRCUIT_BREAKER_HALT_SECONDS,
+        simulationSpeed: DEFAULT_SIMULATION_SPEED,
+        interestRate: DEFAULT_INTEREST_RATE,
+        commissionFee: DEFAULT_COMMISSION_FEE,
     };
   }, []);
 
@@ -73,9 +71,13 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
     if (!activeProfile) return null;
     // For teams, all members share the leader's portfolio state.
     if (activeProfile.teamId) {
-        const teams: Team[] = safeJsonParse<Team[]>('yin_trade_teams', []);
-        const team = teams.find(t => t.id === activeProfile.teamId);
-        return team ? team.leaderId : activeProfile.id; // Fallback to own ID if team not found
+        try {
+            const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
+            const team = teams.find(t => t.id === activeProfile.teamId);
+            return team ? team.leaderId : activeProfile.id; // Fallback to own ID if team not found
+        } catch (e) {
+            return activeProfile.id;
+        }
     }
     return activeProfile.id; // Leader or solo user
   }, [activeProfile]);
@@ -84,29 +86,42 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
   useEffect(() => {
     setIsLoaded(false);
     if (profileIdToLoad) {
-        const savedState = safeJsonParse<ProfileState | null>(getProfileStateKey(profileIdToLoad), null);
-
-        if (savedState) {
-            // Data migration for older profile versions
-            if (!Array.isArray(savedState.portfolio.unsettledCash)) {
-                savedState.portfolio.unsettledCash = [];
+      try {
+        const savedStateJSON = localStorage.getItem(getProfileStateKey(profileIdToLoad));
+        if (savedStateJSON) {
+            const parsedState = JSON.parse(savedStateJSON);
+            if (!Array.isArray(parsedState.portfolio.unsettledCash)) {
+                parsedState.portfolio.unsettledCash = [];
             }
-            if (Array.isArray(savedState.activeOrders)) {
-                savedState.activeOrders.forEach((o: ActiveOrder) => {
+            if (!Array.isArray(parsedState.performanceHistory)) {
+                parsedState.performanceHistory = [];
+            }
+            // Ensure old orders have new properties
+            if (Array.isArray(parsedState.activeOrders)) {
+                parsedState.activeOrders.forEach((o: ActiveOrder) => {
                     if (!o.status) o.status = OrderStatus.WORKING;
                     if (!o.submittedAt) o.submittedAt = o.createdAt;
                 });
             }
-            setProfileState(savedState);
+            setProfileState(parsedState);
         } else {
-            // Initialize a new profile state
             setProfileState({
                 portfolio: { cash: adminSettings.startingCapital, unsettledCash: [], holdings: {} },
                 activeOrders: [],
                 orderHistory: [],
+                performanceHistory: [],
             });
         }
-        setIsLoaded(true);
+      } catch (e) {
+          console.error("Error loading profile state from localStorage", e);
+          setProfileState({
+              portfolio: { cash: adminSettings.startingCapital, unsettledCash: [], holdings: {} },
+              activeOrders: [],
+              orderHistory: [],
+              performanceHistory: [],
+          });
+      }
+      setIsLoaded(true);
     } else {
         setProfileState(null);
     }
@@ -175,21 +190,15 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
   // 2. PriceTicker: Runs when the market is OPEN, updating stock prices on an interval.
   // 3. OrderProcessor & CircuitBreaker: Reacts to price changes to execute orders and check for halts.
 
-  // FIX: Split the monolithic market simulation effect into smaller, focused effects
-  // to prevent stale closures and incorrect re-executions. This resolves the logical error
-  // that was likely causing the reported type comparison issue.
-  // Effect 1a: Market Clock Engine
-  useEffect(() => {
-    // This effect runs once to set up the main market timers.
-    const marketOpenTimer = setTimeout(() => {
+    const openMarket = useCallback(() => {
         setMarketStatus('OPEN');
         showToast('info', 'The market is now open for trading!');
         const initialIndex = STOCKS_DATA.reduce((sum, s) => sum + s.price, 0) / STOCKS_DATA.length;
         setMarketOpenIndexPrice(initialIndex);
         setCircuitBreakerTriggered(false);
-    }, MARKET_OPEN_DELAY_MS);
+    }, [showToast]);
 
-    const marketCloseTimer = setTimeout(() => {
+    const closeMarket = useCallback(() => {
         setMarketStatus('CLOSED');
         setActiveMarketEvent(null);
         showToast('info', 'The market has closed. Pending orders have expired.');
@@ -206,15 +215,52 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
                 activeOrders: [],
             };
         });
-    }, adminSettings.marketDurationMinutes * 60 * 1000 + MARKET_OPEN_DELAY_MS);
+    }, [showToast]);
 
-    return () => {
-        clearTimeout(marketOpenTimer);
-        clearTimeout(marketCloseTimer);
-    };
-    // This effect is intended to run only once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminSettings.marketDurationMinutes]); // Depends on settings that determine market length. showToast and setters are stable.
+    // Admin control functions that update localStorage AND internal state directly.
+    const openMarketAdmin = useCallback(() => {
+        if (marketStatus === 'OPEN' || marketStatus === 'HALTED') return;
+        localStorage.setItem('yin_trade_market_control', JSON.stringify({ action: 'OPEN', timestamp: Date.now() }));
+        openMarket();
+    }, [marketStatus, openMarket]);
+
+    const closeMarketAdmin = useCallback(() => {
+        if (marketStatus !== 'OPEN') return;
+        localStorage.setItem('yin_trade_market_control', JSON.stringify({ action: 'CLOSE', timestamp: Date.now() }));
+        closeMarket();
+    }, [marketStatus, closeMarket]);
+
+
+    useEffect(() => {
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key === 'yin_trade_market_control' && event.newValue) {
+                try {
+                    const { action, timestamp } = JSON.parse(event.newValue);
+                    // Ignore old messages
+                    if (Date.now() - timestamp > 5000) return;
+
+                    if (action === 'OPEN' && marketStatus !== 'OPEN') {
+                        openMarket();
+                    } else if (action === 'CLOSE' && marketStatus !== 'CLOSED') {
+                        closeMarket();
+                    }
+                } catch (e) {
+                    console.error("Could not parse market control event", e);
+                }
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+    }, [openMarket, closeMarket, marketStatus]);
+
+  // Effect 1a: Market Clock Engine
+  useEffect(() => {
+    // This effect used to contain timers to automatically open and close the market.
+    // It has been removed in favor of manual admin controls. The market will now
+    // remain in its initial 'PRE_MARKET' state until an admin opens it.
+  }, []);
 
   // Effect 1b: Events Engine
   useEffect(() => {
@@ -223,17 +269,24 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
     // Event management (random and manual) runs throughout the open market session
     const eventInterval = setInterval(() => {
         // Check for manually triggered events from admin
-        const manualEvent = safeJsonParse<{ eventName: string; timestamp: number } | null>('yin_trade_manual_event', null);
-
-        if (manualEvent && (Date.now() - manualEvent.timestamp < 5000)) {
-            const template = MARKET_EVENTS_TEMPLATES.find(e => e.title === manualEvent.eventName);
-            if (template) {
-                const duration = 20000 + Math.random() * 20000;
-                const newEvent: MarketEvent = { ...template, duration, expiresAt: Date.now() + duration };
-                setActiveMarketEvent(newEvent);
-                showToast('info', newEvent.title);
+        const manualEventJSON = localStorage.getItem('yin_trade_manual_event');
+        if (manualEventJSON) {
+            try {
+                const { eventName, timestamp } = JSON.parse(manualEventJSON);
+                if (Date.now() - timestamp < 5000) {
+                    const template = MARKET_EVENTS_TEMPLATES.find(e => e.title === eventName);
+                    if (template) {
+                        const duration = 20000 + Math.random() * 20000;
+                        const newEvent: MarketEvent = { ...template, duration, expiresAt: Date.now() + duration };
+                        setActiveMarketEvent(newEvent);
+                        showToast('info', newEvent.title);
+                    }
+                    localStorage.removeItem('yin_trade_manual_event');
+                }
+            } catch (e) {
+                console.error("Could not parse manual event", e);
+                localStorage.removeItem('yin_trade_manual_event');
             }
-            localStorage.removeItem('yin_trade_manual_event');
         }
         
         // Random event logic using functional update to avoid stale state
@@ -391,11 +444,31 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
               }
               return order;
           }).filter((o): o is ActiveOrder => o !== null);
+          
+          let newHoldingsValue = 0;
+          Object.values(newHoldings).forEach(holding => {
+              const stock = stocks.find(s => s.symbol === holding.symbol);
+              if (stock) {
+                  newHoldingsValue += stock.price * holding.quantity;
+              }
+          });
 
-          return { portfolio: { cash: newCash, unsettledCash: newUnsettledCash, holdings: newHoldings }, activeOrders: stillActiveOrders, orderHistory: newOrderHistory };
+          const totalUnsettled = newUnsettledCash.reduce((sum, item) => sum + item.amount, 0);
+          const newPortfolioValue = newCash + totalUnsettled + newHoldingsValue;
+          
+          const newPerformanceHistory: PerformanceHistoryEntry[] = [
+              ...prevState.performanceHistory,
+              { timestamp: now, portfolioValue: newPortfolioValue }
+          ].slice(-100);
+
+          return { 
+              portfolio: { cash: newCash, unsettledCash: newUnsettledCash, holdings: newHoldings }, 
+              activeOrders: stillActiveOrders, 
+              orderHistory: newOrderHistory,
+              performanceHistory: newPerformanceHistory,
+            };
       });
-  // FIX: Added all state dependencies to the dependency array to prevent stale state issues.
-  }, [stocks, marketStatus, profileState, adminSettings, circuitBreakerTriggered, marketOpenIndexPrice, showToast]); // Reacts to stock price changes and other state.
+  }, [stocks, marketStatus, adminSettings, circuitBreakerTriggered, marketOpenIndexPrice, showToast]); // Reacts to changes in stocks, market status, and other critical state.
 
   const placeOrder = useCallback((order: TradeOrder) => {
     if (marketStatus !== 'OPEN') {
@@ -504,6 +577,9 @@ export const useStockMarket = (activeProfile: UserProfile | null) => {
       marketSentiment, 
       marketStatus,
       activeMarketEvent,
-      isLoaded
+      isLoaded,
+      adminSettings,
+      openMarketAdmin,
+      closeMarketAdmin,
     };
 };

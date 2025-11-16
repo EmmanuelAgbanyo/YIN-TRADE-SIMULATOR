@@ -116,10 +116,16 @@ export interface OrderHistoryItem {
   traderName: string;
 }
 
+export interface PerformanceHistoryEntry {
+  timestamp: number;
+  portfolioValue: number;
+}
+
 export interface ProfileState {
   portfolio: Portfolio;
   activeOrders: ActiveOrder[];
   orderHistory: OrderHistoryItem[];
+  performanceHistory: PerformanceHistoryEntry[];
 }
 
 export interface NewsHeadline {

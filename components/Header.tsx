@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import ThemeSwitcher from './ui/ThemeSwitcher.tsx';
 import type { MarketSentiment, UserProfile, Team, MarketStatus } from '../types.ts';
@@ -98,8 +95,7 @@ const UserMenu: React.FC<{
     useEffect(() => {
         if (profile.teamId) {
             try {
-                const teamsData = localStorage.getItem('yin_trade_teams');
-                const teams: Team[] = teamsData ? JSON.parse(teamsData) : [];
+                const teams: Team[] = JSON.parse(localStorage.getItem('yin_trade_teams') || '[]');
                 const team = teams.find(t => t.id === profile.teamId);
                 setTeamName(team ? team.name : null);
             } catch (e) {
